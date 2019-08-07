@@ -62,3 +62,7 @@ target_link_libraries(kitti_odom_test vins_lib)
 add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
 target_link_libraries(kitti_gps_test vins_lib) 
 
+#added by SONG
+add_executable(mytest src/mytest.cpp)
+target_link_libraries(mytest vins_lib) 
+

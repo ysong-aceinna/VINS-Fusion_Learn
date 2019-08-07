@@ -31,6 +31,7 @@ static Vector3d last_path(0.0, 0.0, 0.0);
 
 size_t pub_counter = 0;
 
+//SONG:主要是调用NodeHandle::advertise，初始化诸多Publisher，准备向相应的topic上pub数据。
 void registerPub(ros::NodeHandle &n)
 {
     pub_latest_odometry = n.advertise<nav_msgs::Odometry>("imu_propagate", 1000);

@@ -91,6 +91,12 @@ double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2)
     return sqrt(dx * dx + dy * dy);
 }
 
+/*
+SONG: map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame
+第一个int为feature的id，vector里面的int为相机id（0为左图，1为右图），后面的Eigen::Matrix类型里面包含该特征点在该相机下的信息，
+分别为:归一化平面坐标（x,y,z=1），像素坐标（u,v），像素移动速度（v_x,v_y），共七维。
+将featureFrame加入到featurebuf中，传到后端进行图像处理。
+*/
 map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
 {
     TicToc t_r;
@@ -243,7 +249,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         }
         prev_un_right_pts_map = cur_un_right_pts_map;
     }
-    if(SHOW_TRACK)
+    if(SHOW_TRACK) //SONG:如果需要publish tracking image 到 topic。
         drawTrack(cur_img, rightImg, ids, cur_pts, cur_right_pts, prevLeftPtsMap);
 
     prev_img = cur_img;
@@ -339,6 +345,9 @@ void FeatureTracker::rejectWithF()
     }
 }
 
+/*
+SONG:读取摄像机的内参。
+*/
 void FeatureTracker::readIntrinsicParameter(const vector<string> &calib_file)
 {
     for (size_t i = 0; i < calib_file.size(); i++)
@@ -441,6 +450,16 @@ vector<cv::Point2f> FeatureTracker::ptsVelocity(vector<int> &ids, vector<cv::Poi
     return pts_velocity;
 }
 
+/*
+SONG:
+drawTrack : 绘制跟踪点
+1. 如果是双目相机，则合并两幅图
+2. 左半图：
+    2.1 如果某个特征点连续被跟踪了很久（超过20帧），则显示红色，否则显示蓝色
+    2.2 显示光流的箭头
+3. 右半图：
+    3.1 特征点显示为绿色
+*/
 void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight, 
                                vector<int> &curLeftIds,
                                vector<cv::Point2f> &curLeftPts, 
@@ -449,10 +468,10 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
 {
     //int rows = imLeft.rows;
     int cols = imLeft.cols;
-    if (!imRight.empty() && stereo_cam)
+    if (!imRight.empty() && stereo_cam) //SONG:如果右侧图片不为空，且是stereo camera，则把左右两个图拼接起来,拼接后的图为imTrack。 
         cv::hconcat(imLeft, imRight, imTrack);
     else
-        imTrack = imLeft.clone();
+        imTrack = imLeft.clone();       //SONG:如果是monocular camera,则取左侧图为imTrack。
     cv::cvtColor(imTrack, imTrack, CV_GRAY2RGB);
 
     for (size_t j = 0; j < curLeftPts.size(); j++)

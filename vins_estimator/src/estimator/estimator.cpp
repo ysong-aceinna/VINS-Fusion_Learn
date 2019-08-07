@@ -92,29 +92,33 @@ void Estimator::clearState()
     mProcess.unlock();
 }
 
+/*
+SONG:设置Estimator相关参数。
+注意，本函数涉及的参数只是一部分，很多参数是通过全局变量的方式访问的。
+*/
 void Estimator::setParameter()
 {
     mProcess.lock();
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
-        tic[i] = TIC[i];
+        tic[i] = TIC[i]; //SONG:旋转和平移矩阵。
         ric[i] = RIC[i];
         cout << " exitrinsic cam " << i << endl  << ric[i] << endl << tic[i].transpose() << endl;
     }
     f_manager.setRic(ric);
-    ProjectionTwoFrameOneCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
+    ProjectionTwoFrameOneCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity(); //SONG:Identity()单位矩阵
     ProjectionTwoFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
     ProjectionOneFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
     td = TD;
     g = G;
-    cout << "set g " << g.transpose() << endl;
-    featureTracker.readIntrinsicParameter(CAM_NAMES);
+    cout << "set g " << g.transpose() << endl; //SONG:矩阵的转置
+    featureTracker.readIntrinsicParameter(CAM_NAMES); //SONG:读取摄像机的内参。
 
     std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
     if (MULTIPLE_THREAD && !initThreadFlag)
     {
         initThreadFlag = true;
-        processThread = std::thread(&Estimator::processMeasurements, this);
+        processThread = std::thread(&Estimator::processMeasurements, this);//SONG:线程创建就立即执行了。
     }
     mProcess.unlock();
 }
@@ -219,11 +223,11 @@ void Estimator::inputFeature(double t, const map<int, vector<pair<int, Eigen::Ma
         processMeasurements();
 }
 
-
+//SONG:把从t0到t1期间所有的imu数据放入accVector, gyrVector
 bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::Vector3d>> &accVector, 
                                 vector<pair<double, Eigen::Vector3d>> &gyrVector)
 {
-    if(accBuf.empty())
+    if(accBuf.empty()) //SONG:accBuf存储了所有的IMU数据帧。
     {
         printf("not receive imu\n");
         return false;
@@ -232,10 +236,10 @@ bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::
     //printf("imu fornt time %f   imu end time %f\n", accBuf.front().first, accBuf.back().first);
     if(t1 <= accBuf.back().first)
     {
-        while (accBuf.front().first <= t0)
+        while (accBuf.front().first <= t0)//SONG:把早于t0的IMU数据从accBuf和gyrBuf中删除。
         {
-            accBuf.pop();
-            gyrBuf.pop();
+            accBuf.pop(); //SONG:queue:pop() 弹出队列的第一个元素
+            gyrBuf.pop(); 
         }
         while (accBuf.front().first < t1)
         {
@@ -244,7 +248,7 @@ bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::
             gyrVector.push_back(gyrBuf.front());
             gyrBuf.pop();
         }
-        accVector.push_back(accBuf.front());
+        accVector.push_back(accBuf.front()); //SONG: 上边的while循环已经把[t0, t1]间的数据都填充进accVector和gyrVector了，为啥还要再填充一个？
         gyrVector.push_back(gyrBuf.front());
     }
     else
@@ -274,7 +278,7 @@ void Estimator::processMeasurements()
         {
             feature = featureBuf.front();
             curTime = feature.first + td;
-            while(1)
+            while(1) //SONG:检查IMU数据可用，可用就直接跳出while，不可用就等5ms继续检查
             {
                 if ((!USE_IMU  || IMUAvailable(feature.first + td)))
                     break;
@@ -289,7 +293,7 @@ void Estimator::processMeasurements()
             }
             mBuf.lock();
             if(USE_IMU)
-                getIMUInterval(prevTime, curTime, accVector, gyrVector);
+                getIMUInterval(prevTime, curTime, accVector, gyrVector); //SONG:把从prevTime到curTime期间所有的imu数据放入accVector, gyrVector，用于计算IMU的 预计分
 
             featureBuf.pop();
             mBuf.unlock();
@@ -349,9 +353,9 @@ void Estimator::initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVecto
     {
         averAcc = averAcc + accVector[i].second;
     }
-    averAcc = averAcc / n;
+    averAcc = averAcc / n; //SONG:求accVector中n组数据的均值。
     printf("averge acc %f %f %f\n", averAcc.x(), averAcc.y(), averAcc.z());
-    Matrix3d R0 = Utility::g2R(averAcc);
+    Matrix3d R0 = Utility::g2R(averAcc); //SONG: R0是以余弦矩阵表示的初始姿态。
     double yaw = Utility::R2ypr(R0).x();
     R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0;
     Rs[0] = R0;
@@ -1562,7 +1566,7 @@ void Estimator::outliersRejection(set<int> &removeIndex)
 
 void Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity)
 {
-    double dt = t - latest_time;
+    double dt = t - latest_time; //SONG:Delta t
     latest_time = t;
     Eigen::Vector3d un_acc_0 = latest_Q * (latest_acc_0 - latest_Ba) - g;
     Eigen::Vector3d un_gyr = 0.5 * (latest_gyr_0 + angular_velocity) - latest_Bg;

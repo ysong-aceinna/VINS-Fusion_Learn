@@ -29,7 +29,48 @@ queue<sensor_msgs::ImageConstPtr> img0_buf;
 queue<sensor_msgs::ImageConstPtr> img1_buf;
 std::mutex m_buf;
 
+/////////////////////////////////////////////////////////////////////////////////
+#include <iostream>
+#include <random>
 
+#define real float
+
+real* accel_noise = NULL;
+real* gyro_noise = NULL;
+unsigned int noise_count = 0;
+
+struct NoiseModel 
+{
+    real gyro_noise_mean;
+    real gyro_noise_stddev;
+    real accel_noise_mean;
+    real accel_noise_stddev;
+};
+
+// need to be set:
+bool add_noise = true;
+const unsigned int NOISE_BUF_LEN = 12000*3; //200hz, 1分钟，三轴
+const unsigned int IDX = 1;
+NoiseModel noise_model_array[] = {
+    {0.0, 0.177075, 0.0, 0.03937},               //ARW:1.0   VRW:0.2
+    {0.0, 0.31749, 0.0, 0.0657858},              //ARW:1.5   VRW:0.3
+    {0.0, 0.444997, 0.0, 0.0906458},             //ARW:2.0   VRW:0.4
+    {0.0, 1.1682, 0.0, 0.234272},                //ARW:5.0   VRW:1.0
+    {0.0, 2.35188, 0.0, 0.706631},               //ARW:10.0  VRW:3.0
+    {0.0, 11.7841, 0.0, 4.71397},                //ARW:50.0  VRW:20.0
+
+    {2.0, 0.0, 0.0, 0.0},                       //gyro_bias:2.0 deg/s
+    {3.0, 0.0, 0.0, 0.0},                       //gyro_bias:3.0 deg/s
+    {0.0, 0.0, 0.3, 0.0},                       //accel_bias:0.3 m/s^2
+    {0.0, 0.0, 1.5, 0.0},                       //accel_bias:1.5 m/s^2
+    {0.0, 0.0, 3.0, 0.0},                       //accel_bias:3.0 m/s^2
+
+    {0.0, 0, 0.0, 0}                //ARW:0.66  VRW:0.11 (ADIS14468)
+};
+
+real* GenerateGaussianWhiteNoise(unsigned int buflen, real mean, real stddev);
+
+/////////////////////////////////////////////////////////////////////////////////
 void img0_callback(const sensor_msgs::ImageConstPtr &img_msg)
 {
     m_buf.lock();
@@ -141,6 +182,24 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     double rx = imu_msg->angular_velocity.x;
     double ry = imu_msg->angular_velocity.y;
     double rz = imu_msg->angular_velocity.z;
+
+    //add noise to IMU
+    if(add_noise)
+    {
+        dx += accel_noise[noise_count++];
+        dy += accel_noise[noise_count++];
+        dz += accel_noise[noise_count++];
+        noise_count -= 3;
+        rx += gyro_noise[noise_count++];
+        ry += gyro_noise[noise_count++];
+        rz += gyro_noise[noise_count++];
+
+        if(noise_count >= NOISE_BUF_LEN-3)
+        {
+            noise_count = 0;
+        }
+    }
+
     Vector3d acc(dx, dy, dz);
     Vector3d gyr(rx, ry, rz);
     estimator.inputIMU(t, acc, gyr);
@@ -227,6 +286,10 @@ int main(int argc, char **argv)
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
+    gyro_noise = GenerateGaussianWhiteNoise(NOISE_BUF_LEN, noise_model_array[IDX].gyro_noise_mean, noise_model_array[IDX].gyro_noise_stddev);
+    cout << "****************" << endl;
+    accel_noise = GenerateGaussianWhiteNoise(NOISE_BUF_LEN, noise_model_array[IDX].accel_noise_mean, noise_model_array[IDX].accel_noise_stddev);
+
     if(argc != 2)
     {
         printf("please intput: rosrun vins vins_node [config file] \n"
@@ -261,4 +324,27 @@ int main(int argc, char **argv)
     ros::spin();
 
     return 0;
+}
+
+//ref:https://stackoverflow.com/questions/32889309/adding-gaussian-noise
+real* GenerateGaussianWhiteNoise(unsigned int buflen, real mean, real stddev)
+{
+    real* noise = new real[buflen];
+    memset(noise, 0, buflen*sizeof(real));
+    // construct a trivial random generator engine from a time-based seed:
+    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    std::default_random_engine generator (seed);
+    std::normal_distribution<real> dist(mean, stddev);
+    for (unsigned int i = 0; i < buflen; i++)
+    {
+        noise[i] = dist(generator);
+    }
+    
+    cout << "mean:" << mean << "  stddev:" << stddev << endl;
+    for(int i = 0; i < MIN(10,buflen); i++)
+    {
+        cout << noise[i] << endl;
+    }
+
+    return noise;
 }
