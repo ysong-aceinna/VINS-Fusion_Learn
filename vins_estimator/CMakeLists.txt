@@ -56,13 +56,14 @@ target_link_libraries(vins_lib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRAR
 add_executable(vins_node src/rosNodeTest.cpp)
 target_link_libraries(vins_node vins_lib) 
 
-add_executable(kitti_odom_test src/KITTIOdomTest.cpp)
-target_link_libraries(kitti_odom_test vins_lib) 
+#Do not complile kitti_XX for saving time.
+#add_executable(kitti_odom_test src/KITTIOdomTest.cpp)
+#target_link_libraries(kitti_odom_test vins_lib) 
 
-add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
-target_link_libraries(kitti_gps_test vins_lib) 
+#add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
+#target_link_libraries(kitti_gps_test vins_lib) 
 
-#added by SONG
-add_executable(mytest src/mytest.cpp)
-target_link_libraries(mytest vins_lib) 
+#added by SONG for test
+#add_executable(mytest src/mytest.cpp)
+#target_link_libraries(mytest vins_lib) 
 
