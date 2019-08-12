@@ -173,6 +173,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         featureFrame = featureTracker.trackImage(t, _img, _img1);
     //printf("featureTracker time: %f\n", featureTrackerTime.toc());
 
+    //SONG:imgTrack是在输入图像上绘制特征点的图像。
     if (SHOW_TRACK)
     {
         cv::Mat imgTrack = featureTracker.getTrackImage();
@@ -181,7 +182,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
     
     if(MULTIPLE_THREAD)  
     {     
-        if(inputImageCnt % 2 == 0)
+        if(inputImageCnt % 2 == 0)    //SONG:若采用多线程，只将偶数帧的featureFrame保存到featureBuf
         {
             mBuf.lock();
             featureBuf.push(make_pair(t, featureFrame));
@@ -301,7 +302,7 @@ void Estimator::processMeasurements()
             if(USE_IMU)
             {
                 if(!initFirstPoseFlag)
-                    initFirstIMUPose(accVector);
+                    initFirstIMUPose(accVector);//SONG: 获取IMU的初始姿态，并赋给Rs[0]。
                 for(size_t i = 0; i < accVector.size(); i++)
                 {
                     double dt;
@@ -311,11 +312,12 @@ void Estimator::processMeasurements()
                         dt = curTime - accVector[i - 1].first;
                     else
                         dt = accVector[i].first - accVector[i - 1].first;
+                    //SONG:IMU预计分。
                     processIMU(accVector[i].first, dt, accVector[i].second, gyrVector[i].second);
                 }
             }
             mProcess.lock();
-            processImage(feature.second, feature.first);
+            processImage(feature.second, feature.first);//SONG:feature.first是时间(秒)，
             prevTime = curTime;
 
             printStatistics(*this, 0);
@@ -341,7 +343,7 @@ void Estimator::processMeasurements()
     }
 }
 
-
+//SONG: 获取IMU的初始姿态，并赋给Rs[0]。
 void Estimator::initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVector)
 {
     printf("init first imu pose\n");
@@ -371,7 +373,7 @@ void Estimator::initFirstPose(Eigen::Vector3d p, Eigen::Matrix3d r)
     initR = r;
 }
 
-
+//SONG:IMU预计分。
 void Estimator::processIMU(double t, double dt, const Vector3d &linear_acceleration, const Vector3d &angular_velocity)
 {
     if (!first_imu)

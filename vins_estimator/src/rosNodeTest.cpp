@@ -104,10 +104,10 @@ cv::Mat getImageFromMsg(const sensor_msgs::ImageConstPtr &img_msg)
     else
         ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::MONO8);
 
-    cv::Mat img = ptr->image.clone();
+    cv::Mat img = ptr->image.clone();//SONG:深拷贝。
     return img;
 }
-
+//SONG:对于stereo camera，根据时间戳同步两个camera的frame
 // extract images with same timestamp from two topics
 void sync_process()
 {
@@ -124,7 +124,7 @@ void sync_process()
                 double time0 = img0_buf.front()->header.stamp.toSec();
                 double time1 = img1_buf.front()->header.stamp.toSec();
                 // 0.003s sync tolerance
-                if(time0 < time1 - 0.003)
+                if(time0 < time1 - 0.003)//SONG:舍弃time0与time1间隔大于0.003秒的frame。
                 {
                     img0_buf.pop();
                     printf("throw img0\n");
@@ -301,7 +301,7 @@ int main(int argc, char **argv)
     string config_file = argv[1];
     printf("config_file: %s\n", argv[1]);
 
-    readParameters(config_file);
+    readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量
     estimator.setParameter();
 
 #ifdef EIGEN_DONT_PARALLELIZE

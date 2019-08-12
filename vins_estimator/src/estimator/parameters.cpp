@@ -62,7 +62,7 @@ T readParam(ros::NodeHandle &n, std::string name)
     }
     return ans;
 }
-
+//SONG:从配置文件读取配置参数，并赋给全局变量
 void readParameters(std::string config_file)
 {
     FILE *fh = fopen(config_file.c_str(),"r");

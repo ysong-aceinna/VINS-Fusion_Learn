@@ -78,7 +78,7 @@ void pubTrackImage(const cv::Mat &imgTrack, const double t)
     pub_image_track.publish(imgTrackMsg);
 }
 
-
+//SONG:打印当前的统计值。
 void printStatistics(const Estimator &estimator, double t)
 {
     if (estimator.solver_flag != Estimator::SolverFlag::NON_LINEAR)
