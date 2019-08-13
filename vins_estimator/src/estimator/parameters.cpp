@@ -135,8 +135,8 @@ void readParameters(std::string config_file)
         fsSettings["body_T_cam0"] >> cv_T;
         Eigen::Matrix4d T;
         cv::cv2eigen(cv_T, T); //SONG:opencv与eigen矩阵转换。
-        RIC.push_back(T.block<3, 3>(0, 0));//SONG: .block: 矩阵块操作
-        TIC.push_back(T.block<3, 1>(0, 3));
+        RIC.push_back(T.block<3, 3>(0, 0));//SONG: .block: 矩阵块操作,取左上的3x3部分，即取R
+        TIC.push_back(T.block<3, 1>(0, 3));//SONG: .block: 矩阵块操作,取右上的3x1部分，即取T
     } 
     
     NUM_OF_CAM = fsSettings["num_of_cam"];
