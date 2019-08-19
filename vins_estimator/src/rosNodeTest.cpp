@@ -48,7 +48,7 @@ struct NoiseModel
 };
 
 // need to be set:
-bool add_noise = true;
+bool add_noise = false;
 const unsigned int NOISE_BUF_LEN = 12000*3; //200hz, 1分钟，三轴
 const unsigned int IDX = 1;
 NoiseModel noise_model_array[] = {
@@ -202,6 +202,10 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 
     Vector3d acc(dx, dy, dz);
     Vector3d gyr(rx, ry, rz);
+
+    // Vector3d acc(dz, -1*dy, dx);
+    // Vector3d gyr(rz, -1*ry, rx);
+
     estimator.inputIMU(t, acc, gyr);
     return;
 }
@@ -287,7 +291,7 @@ int main(int argc, char **argv)
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
     gyro_noise = GenerateGaussianWhiteNoise(NOISE_BUF_LEN, noise_model_array[IDX].gyro_noise_mean, noise_model_array[IDX].gyro_noise_stddev);
-    cout << "****************" << endl;
+    cout << "!****************!" << endl;
     accel_noise = GenerateGaussianWhiteNoise(NOISE_BUF_LEN, noise_model_array[IDX].accel_noise_mean, noise_model_array[IDX].accel_noise_stddev);
 
     if(argc != 2)
