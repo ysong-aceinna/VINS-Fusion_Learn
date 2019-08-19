@@ -1,11 +1,20 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vins)
 
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++11")
-#-DEIGEN_USE_MKL_ALL")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
-#set(CMAKE_CXX_FLAGS_DEBUG "-O0 -Wall -g -ggdb")#SONG: uncomment if need debug.
+set(COMPILE_TYPE Debug)  #Debug Release
+
+if(COMPILE_TYPE STREQUAL "Release")
+  set(CMAKE_BUILD_TYPE "Release")
+  set(CMAKE_CXX_FLAGS "-std=c++11")
+  #-DEIGEN_USE_MKL_ALL")
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+elseif(COMPILE_TYPE STREQUAL "Debug")
+  SET(CMAKE_BUILD_TYPE "Debug")
+  SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
+else()
+  message(FATAL_ERROR "COMPILE_TYPE is Error!")
+endif()
+  message(WARNING "COMPILE_TYPE = ${COMPILE_TYPE}") #make this msg highlight. 
 
 find_package(catkin REQUIRED COMPONENTS
     roscpp
@@ -19,7 +28,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(OpenCV REQUIRED)
 
-# message(WARNING "OpenCV_VERSION: ${OpenCV_VERSION}")
+message(WARNING "OpenCV_VERSION: ${OpenCV_VERSION}")
 
 find_package(Ceres REQUIRED)
 
