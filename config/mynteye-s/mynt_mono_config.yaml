@@ -19,30 +19,32 @@ image_height: 480
 estimate_extrinsic: 0   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
 
-# NOTE: body_T_cam0 IS NOT means the a rotation matrix which transform the IMU measurements to camera0 frame,
-#       but means a rotation matrix which transform camera0 frame to IMU frame.!!!
+# NOTE: body_T_cam0 IS NOT means the a transition matrix which transform the IMU measurements to camera0 frame,
+#       but means a transition matrix which transform camera0 frame to IMU frame.!!!
 
 #for S1030, MYNT didn't calibrate IMU and get body_T_cam0 for each camera,
 # 2 ways to get body_T_cam: (both of those 2 ways have same values)
 #   1-. follow mynt_xxxx_config.yaml
 #   2-. follow "https://github.com/slightech/MYNT-EYE-S-SDK/blob/master/tools/writer/config/S1030/imu.params"
+#dt:d means data type: double
 body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
-   dt: d  #data type: double
+   dt: d
    data: [-0.0064662, -0.99994994, -0.00763565, 0.00533646,
            0.99997909, -0.00646566, -0.00009558, -0.04302922,
            0.0000462, -0.00763611, 0.99997084, 0.02303124,
            0, 0, 0, 1]
 
-#SONG:
-R_imu_T_body: !!opencv-matrix
-   rows: 3
-   cols: 3
+#SONG: transition matrix from IMU to body.
+IMU_T_body: !!opencv-matrix
+   rows: 4
+   cols: 4
    dt: d
-   data: [-0.0064662, -0.99994994, -0.00763565,
-           0.99997909, -0.00646566, -0.00009558,
-           0.0000462, -0.00763611, 0.99997084]
+   data: [ 0,  0, 1, 0,
+           0, -1, 0, 0,
+           1,  0, 0, 0,
+           0,  0, 0, 1]
 
 #Multiple thread support
 multiple_thread: 1

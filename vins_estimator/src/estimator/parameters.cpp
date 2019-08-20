@@ -113,6 +113,13 @@ void readParameters(std::string config_file)
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
 
+    //SONG:
+    cv::Mat cv_T_imu2body;
+    fsSettings["IMU_T_body"] >> cv_T_imu2body;
+    Eigen::Matrix4d T_imu2body;
+    cv::cv2eigen(cv_T_imu2body, T_imu2body); 
+    cout << "T_imu2body:" << endl << T_imu2body << endl;
+
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)
     {
@@ -135,6 +142,13 @@ void readParameters(std::string config_file)
         fsSettings["body_T_cam0"] >> cv_T;
         Eigen::Matrix4d T;
         cv::cv2eigen(cv_T, T); //SONG:opencv与eigen矩阵转换。
+
+        cout << "T:" << endl << T << endl;
+        Eigen::Matrix4d T_cam02body = T_imu2body * T;
+        cout << "T_cam02body:" << endl << T_cam02body << endl;
+        cout << "T_33:" << endl << T.block<3, 3>(0, 0) << endl;
+        cout << "T_31:" << endl << T.block<3, 1>(0, 3) << endl;
+
         RIC.push_back(T.block<3, 3>(0, 0));//SONG: .block: 矩阵块操作,取左上的3x3部分，即取R
         TIC.push_back(T.block<3, 1>(0, 3));//SONG: .block: 矩阵块操作,取右上的3x1部分，即取T
     } 
