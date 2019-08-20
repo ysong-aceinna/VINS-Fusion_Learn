@@ -55,6 +55,7 @@ add_library(vins_lib
     src/utility/utility.cpp
     src/utility/visualization.cpp
     src/utility/CameraPoseVisualization.cpp
+    src/utility/simulator.cpp
     src/initial/solve_5pts.cpp
     src/initial/initial_aligment.cpp
     src/initial/initial_sfm.cpp
@@ -74,6 +75,6 @@ target_link_libraries(vins_node vins_lib)
 #target_link_libraries(kitti_gps_test vins_lib) 
 
 #added by SONG for test
-#add_executable(mytest src/mytest.cpp)
-#target_link_libraries(mytest vins_lib) 
+add_executable(mytest src/mytest.cpp)
+target_link_libraries(mytest vins_lib) 
 
