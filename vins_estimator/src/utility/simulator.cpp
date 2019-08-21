@@ -9,6 +9,9 @@ CSimulator::CSimulator()
     noise_count_accel = 0;
     noise_count_gyro = 0;
     idx = 4;
+    
+    //Generate Noise automatically.
+    GenerateNoiseOnGyroAccel();  
 }
 
 CSimulator::~CSimulator()

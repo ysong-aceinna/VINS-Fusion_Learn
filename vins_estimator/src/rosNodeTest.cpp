@@ -45,7 +45,7 @@ void img1_callback(const sensor_msgs::ImageConstPtr &img_msg)
     m_buf.unlock();
 }
 
-
+//SONG: image 类型适配。
 cv::Mat getImageFromMsg(const sensor_msgs::ImageConstPtr &img_msg)
 {
     cv_bridge::CvImageConstPtr ptr;
@@ -128,7 +128,7 @@ void sync_process()
         }
 
         std::chrono::milliseconds dura(2);
-        std::this_thread::sleep_for(dura);
+        std::this_thread::sleep_for(dura);//SONG: C++11 延时2ms
     }
 }
 
@@ -143,15 +143,15 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     double ry = imu_msg->angular_velocity.y;
     double rz = imu_msg->angular_velocity.z;
 
-    //add noise to IMU
+    //SONG:add noise to IMU for simulation.
     if(add_noise)
     {
-        dx += simulator.GetAccel();
-        dy += simulator.GetAccel();
-        dz += simulator.GetAccel();
-        rx += simulator.GetGyro();
-        ry += simulator.GetGyro();
-        rz += simulator.GetGyro();
+        dx += simulator.GetAccelNoise();
+        dy += simulator.GetAccelNoise();
+        dz += simulator.GetAccelNoise();
+        rx += simulator.GetGyroNoise();
+        ry += simulator.GetGyroNoise();
+        rz += simulator.GetGyroNoise();
     }
 
     Eigen::Vector3d acc(dx, dy, dz);
@@ -194,7 +194,7 @@ void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg)
     estimator.inputFeature(t, featureFrame);
     return;
 }
-
+//SONG:清空当前的检测状态，并重启算法
 void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
 {
     if (restart_msg->data == true)
@@ -205,7 +205,7 @@ void restart_callback(const std_msgs::BoolConstPtr &restart_msg)
     }
     return;
 }
-
+//SONG: 设置是否使用IMU.
 void imu_switch_callback(const std_msgs::BoolConstPtr &switch_msg)
 {
     if (switch_msg->data == true)
@@ -220,7 +220,7 @@ void imu_switch_callback(const std_msgs::BoolConstPtr &switch_msg)
     }
     return;
 }
-
+//SONG: 设置使用Mono or Setero cameras.
 void cam_switch_callback(const std_msgs::BoolConstPtr &switch_msg)
 {
     if (switch_msg->data == true)
@@ -242,11 +242,6 @@ int main(int argc, char **argv)
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
-    if(add_noise)
-    {
-        simulator.GenerateNoiseOnGyroAccel();
-    }
-
     if(argc != 2)
     {
         printf("please intput: rosrun vins vins_node [config file] \n"
@@ -259,7 +254,7 @@ int main(int argc, char **argv)
     printf("config_file: %s\n", argv[1]);
 
     readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量
-    estimator.setParameter();
+    estimator.setParameter(); //SONG:为estimator设置参数，且启动重要线程: Estimator::processMeasurements
 
 #ifdef EIGEN_DONT_PARALLELIZE
     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");

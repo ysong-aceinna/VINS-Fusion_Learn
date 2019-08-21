@@ -105,14 +105,14 @@ void Estimator::setParameter()
         ric[i] = RIC[i];
         cout << " exitrinsic cam " << i << endl  << ric[i] << endl << tic[i].transpose() << endl;
     }
-    f_manager.setRic(ric);
+    f_manager.setRic(ric);   //SONG:sqrt_info是static变量
     ProjectionTwoFrameOneCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity(); //SONG:Identity()单位矩阵
     ProjectionTwoFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
     ProjectionOneFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
-    td = TD;
+    td = TD;  //SONG:取自yaml的td 和 g_norm。
     g = G;
     cout << "set g " << g.transpose() << endl; //SONG:矩阵的转置
-    featureTracker.readIntrinsicParameter(CAM_NAMES); //SONG:读取摄像机的内参。
+    featureTracker.readIntrinsicParameter(CAM_NAMES); //SONG:取自yaml的cam0_calib，即读取摄像机的mei/pinhole/equ校准参数。
 
     std::cout << "MULTIPLE_THREAD is " << MULTIPLE_THREAD << '\n';
     if (MULTIPLE_THREAD && !initThreadFlag)
@@ -209,6 +209,7 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
     //printf("input imu with time %f \n", t);
     mBuf.unlock();
 
+    //SONG:IMU的预计分。
     fastPredictIMU(t, linearAcceleration, angularVelocity);
     if (solver_flag == NON_LINEAR)
         pubLatestOdometry(latest_P, latest_Q, latest_V, t);
@@ -1444,14 +1445,14 @@ void Estimator::slideWindowOld()
         f_manager.removeBack();
 }
 
-
+//SONG:获取World frame下最新帧的pose.
 void Estimator::getPoseInWorldFrame(Eigen::Matrix4d &T)
 {
     T = Eigen::Matrix4d::Identity();
     T.block<3, 3>(0, 0) = Rs[frame_count];
     T.block<3, 1>(0, 3) = Ps[frame_count];
 }
-
+//SONG:获取World frame下指定帧的pose.
 void Estimator::getPoseInWorldFrame(int index, Eigen::Matrix4d &T)
 {
     T = Eigen::Matrix4d::Identity();
@@ -1493,7 +1494,7 @@ void Estimator::predictPtsInNextFrame()
     featureTracker.setPrediction(predictPts);
     //printf("estimator output %d predict pts\n",(int)predictPts.size());
 }
-
+//SONG:计算重映射误差。
 double Estimator::reprojectionError(Matrix3d &Ri, Vector3d &Pi, Matrix3d &rici, Vector3d &tici,
                                  Matrix3d &Rj, Vector3d &Pj, Matrix3d &ricj, Vector3d &ticj, 
                                  double depth, Vector3d &uvi, Vector3d &uvj)
@@ -1565,7 +1566,7 @@ void Estimator::outliersRejection(set<int> &removeIndex)
 
     }
 }
-
+//SONG:IMU的预计分。须要结合论文算法来理解。
 void Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity)
 {
     double dt = t - latest_time; //SONG:Delta t

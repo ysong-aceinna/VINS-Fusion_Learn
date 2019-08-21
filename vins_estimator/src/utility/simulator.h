@@ -47,13 +47,13 @@ public:
 	~CSimulator();
     void GenerateNoiseOnGyroAccel();
     
-    inline real GetAccel()
+    inline real GetAccelNoise()
     {
         if(noise_count_accel >= NOISE_BUF_LEN) noise_count_accel = 0;
         return accel_noise[noise_count_accel++];
     }
 
-    inline real GetGyro()
+    inline real GetGyroNoise()
     {
         if(noise_count_gyro >= NOISE_BUF_LEN) noise_count_gyro = 0;
         return gyro_noise[noise_count_gyro++];
