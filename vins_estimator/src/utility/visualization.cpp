@@ -153,6 +153,14 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
         path.poses.push_back(pose_stamped);
         pub_path.publish(path);
 
+        //SONG: add YPR msg from Q.
+        // method 1:
+        // Eigen::Matrix3d R = Eigen::Quaterniond(tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z()).toRotationMatrix();
+        // Eigen::Vector3d YPR = Utility::R2ypr(R);
+
+        // method 2:  '.matrix' same as '.toRotationMatrix'
+        Eigen::Vector3d YPR = Eigen::Quaterniond(tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z()).matrix().eulerAngles(2,1,0)/ M_PI * 180.0;
+
         // write result to file
         ofstream foutC(VINS_RESULT_PATH, ios::app);
         foutC.setf(ios::fixed, ios::floatfield);
@@ -166,13 +174,17 @@ void pubOdometry(const Estimator &estimator, const std_msgs::Header &header)
               << tmp_Q.x() << ","
               << tmp_Q.y() << ","
               << tmp_Q.z() << ","
+              << YPR.x() << ","
+              << YPR.y() << ","
+              << YPR.z() << ","
               << estimator.Vs[WINDOW_SIZE].x() << ","
               << estimator.Vs[WINDOW_SIZE].y() << ","
               << estimator.Vs[WINDOW_SIZE].z() << "," << endl;
         foutC.close();
         Eigen::Vector3d tmp_T = estimator.Ps[WINDOW_SIZE];
-        printf("time: %f, t: %f %f %f q: %f %f %f %f \n", header.stamp.toSec(), tmp_T.x(), tmp_T.y(), tmp_T.z(),
-                                                          tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z());
+        printf("time: %f, t: %f %f %f q: %f %f %f %f YPR: %f %f %f \n", header.stamp.toSec(), tmp_T.x(), tmp_T.y(), tmp_T.z(),
+                                                          tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z(),
+                                                          YPR.x(), YPR.y(), YPR.z());
     }
 }
 
@@ -312,6 +324,25 @@ void pubTF(const Estimator &estimator, const std_msgs::Header &header)
     static tf::TransformBroadcaster br;
     tf::Transform transform;
     tf::Quaternion q;
+
+    // // publish transform from body to IMU frame
+    // double yaw = 3.14159265;
+    // double pitch = -3.14159265/2;
+    // double roll = 0;
+    // Eigen::Vector3d eulerAngle(yaw,pitch,roll);
+    // Eigen::AngleAxisd rollAngle(AngleAxisd(eulerAngle(2),Vector3d::UnitX()));
+    // Eigen::AngleAxisd pitchAngle(AngleAxisd(eulerAngle(1),Vector3d::UnitY()));
+    // Eigen::AngleAxisd yawAngle(AngleAxisd(eulerAngle(0),Vector3d::UnitZ()));
+    // Eigen::Quaterniond quaternion = yawAngle*pitchAngle*rollAngle;
+
+    // transform.setOrigin(tf::Vector3(0, 0, 0));
+    // q.setW(quaternion.w());
+    // q.setX(quaternion.x());
+    // q.setY(quaternion.y());
+    // q.setZ(quaternion.z());
+    // transform.setRotation(q);
+    // br.sendTransform(tf::StampedTransform(transform, header.stamp, "imu", "body"));
+
     // body frame
     Vector3d correct_t;
     Quaterniond correct_q;
