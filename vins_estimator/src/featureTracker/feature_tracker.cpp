@@ -93,7 +93,8 @@ double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2)
 
 /*
 SONG: map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame
-第一个int为feature的id，vector里面的int为相机id（0为左图，1为右图），后面的Eigen::Matrix类型里面包含该特征点在该相机下的信息，
+第一个int为feature的id，vector里面的int为相机id（0为左边的camera0，1为右边的camera1），
+后面的Eigen::Matrix类型里面包含该特征点在该相机下的信息，
 分别为:归一化平面坐标（x,y,z=1），像素坐标（u,v），像素移动速度（v_x,v_y），共七维。
 将featureFrame加入到featurebuf中，传到后端进行图像处理。
 */

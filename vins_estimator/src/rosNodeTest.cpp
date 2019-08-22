@@ -162,7 +162,9 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     return;
 }
 
-
+//SONG:正常情况下，是在Estimator::inputImage中根据input image得到featureFrame并将其push到featureBuf
+//也可由下边函数，在listrn到feature_msg后，由estimator.inputFeature将featureFramepush到featureBuf。
+//节省了计算featureFrame的开销。
 void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg)
 {
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
