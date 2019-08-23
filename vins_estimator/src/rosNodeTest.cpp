@@ -29,7 +29,7 @@ queue<sensor_msgs::ImageConstPtr> img0_buf;
 queue<sensor_msgs::ImageConstPtr> img1_buf;
 std::mutex m_buf;
 CSimulator simulator(0);
-bool add_noise = false;
+bool add_noise = true;
 
 void img0_callback(const sensor_msgs::ImageConstPtr &img_msg)
 {
@@ -146,8 +146,8 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     //SONG:add noise to IMU for simulation.
     if(add_noise)
     {
-        // cout << "accel1: " << dx << " , " << dy << " , " << dz << endl;
-        // cout << "gyro1 : " << rx << " , " << ry << " , " << rz << endl;
+        cout << "accel1," << dx << "," << dy << "," << dz << endl;
+        cout << "gyro1," << rx << "," << ry << "," << rz << endl;
 
         dx += simulator.GetAccelNoise();
         dy += simulator.GetAccelNoise();
@@ -156,8 +156,8 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
         ry += simulator.GetGyroNoise();
         rz += simulator.GetGyroNoise();
 
-        // cout << "accel2: " << dx << " , " << dy << " , " << dz << endl;
-        // cout << "gyro2 : " << rx << " , " << ry << " , " << rz << endl<< endl;
+        cout << "accel2," << dx << "," << dy << "," << dz << endl;
+        cout << "gyro2," << rx << "," << ry << "," << rz << endl<< endl;
     }
 
     Eigen::Vector3d acc(dx, dy, dz);
@@ -249,6 +249,11 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "vins_estimator");
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
+
+    if(add_noise)
+    {
+        simulator.GenerateNoiseOnGyroAccel();  
+    }
 
     if(argc != 2)
     {

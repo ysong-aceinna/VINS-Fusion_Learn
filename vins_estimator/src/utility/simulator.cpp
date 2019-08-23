@@ -9,9 +9,6 @@ CSimulator::CSimulator(unsigned int _idx)
     noise_count_accel = 0;
     noise_count_gyro = 0;
     idx = _idx;
-    
-    //Generate Noise automatically.
-    GenerateNoiseOnGyroAccel();  
 }
 
 CSimulator::~CSimulator()
@@ -26,7 +23,8 @@ real* CSimulator::GenerateGaussianWhiteNoise(unsigned int buflen, real mean, rea
     real* noise = new real[buflen];
     memset(noise, 0, buflen*sizeof(real));
     // construct a trivial random generator engine from a time-based seed:
-    unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    // unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
+    unsigned seed = 1;
     std::default_random_engine generator (seed);
     std::normal_distribution<real> dist(mean, stddev);
     for (unsigned int i = 0; i < buflen; i++)
