@@ -43,7 +43,7 @@ NoiseModel noise_model_array[] = {
 class CSimulator
 {
 public:
-	CSimulator();
+	CSimulator(unsigned int _idx = 0);
 	~CSimulator();
     void GenerateNoiseOnGyroAccel();
     

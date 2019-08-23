@@ -2,13 +2,13 @@
 
 #include "simulator.h"
 
-CSimulator::CSimulator()
+CSimulator::CSimulator(unsigned int _idx)
 {
     accel_noise = NULL;
     gyro_noise = NULL;
     noise_count_accel = 0;
     noise_count_gyro = 0;
-    idx = 4;
+    idx = _idx;
     
     //Generate Noise automatically.
     GenerateNoiseOnGyroAccel();  

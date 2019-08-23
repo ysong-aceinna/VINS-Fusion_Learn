@@ -28,7 +28,7 @@ queue<sensor_msgs::PointCloudConstPtr> feature_buf;
 queue<sensor_msgs::ImageConstPtr> img0_buf;
 queue<sensor_msgs::ImageConstPtr> img1_buf;
 std::mutex m_buf;
-CSimulator simulator;
+CSimulator simulator(0);
 bool add_noise = false;
 
 void img0_callback(const sensor_msgs::ImageConstPtr &img_msg)
@@ -146,12 +146,18 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     //SONG:add noise to IMU for simulation.
     if(add_noise)
     {
+        // cout << "accel1: " << dx << " , " << dy << " , " << dz << endl;
+        // cout << "gyro1 : " << rx << " , " << ry << " , " << rz << endl;
+
         dx += simulator.GetAccelNoise();
         dy += simulator.GetAccelNoise();
         dz += simulator.GetAccelNoise();
         rx += simulator.GetGyroNoise();
         ry += simulator.GetGyroNoise();
         rz += simulator.GetGyroNoise();
+
+        // cout << "accel2: " << dx << " , " << dy << " , " << dz << endl;
+        // cout << "gyro2 : " << rx << " , " << ry << " , " << rz << endl<< endl;
     }
 
     Eigen::Vector3d acc(dx, dy, dz);
