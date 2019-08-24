@@ -46,10 +46,15 @@ NoiseModel noise_model_array[] = {
 class CSimulator
 {
 public:
-	CSimulator(unsigned int _idx = 0);
+	CSimulator();
 	~CSimulator();
     void GenerateNoiseOnGyroAccel();
     
+    inline void SetNoiseType(unsigned int _idx)
+    {
+        idx = _idx;
+    }
+
     inline real GetAccelNoise()
     {
         if(noise_count_accel >= NOISE_BUF_LEN) noise_count_accel = 0;

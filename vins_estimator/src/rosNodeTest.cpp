@@ -28,8 +28,7 @@ queue<sensor_msgs::PointCloudConstPtr> feature_buf;
 queue<sensor_msgs::ImageConstPtr> img0_buf;
 queue<sensor_msgs::ImageConstPtr> img1_buf;
 std::mutex m_buf;
-CSimulator simulator(0);
-bool add_noise = true;
+CSimulator simulator;
 
 void img0_callback(const sensor_msgs::ImageConstPtr &img_msg)
 {
@@ -128,7 +127,7 @@ void sync_process()
         }
 
         std::chrono::milliseconds dura(2);
-        std::this_thread::sleep_for(dura);//SONG: C++11 延时2ms
+        std::this_thread::sleep_for(dura);//SONG: C++11 sleep for 2ms
     }
 }
 
@@ -144,10 +143,10 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     double rz = imu_msg->angular_velocity.z;
 
     //SONG:add noise to IMU for simulation.
-    if(add_noise)
+    if(B_ADD_EXTRA_NOISE)
     {
-        cout << "accel1," << dx << "," << dy << "," << dz << endl;
-        cout << "gyro1," << rx << "," << ry << "," << rz << endl;
+        // cout << "accel1," << dx << "," << dy << "," << dz << endl;
+        // cout << "gyro1," << rx << "," << ry << "," << rz << endl;
 
         dx += simulator.GetAccelNoise();
         dy += simulator.GetAccelNoise();
@@ -156,8 +155,8 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
         ry += simulator.GetGyroNoise();
         rz += simulator.GetGyroNoise();
 
-        cout << "accel2," << dx << "," << dy << "," << dz << endl;
-        cout << "gyro2," << rx << "," << ry << "," << rz << endl<< endl;
+        // cout << "accel2," << dx << "," << dy << "," << dz << endl;
+        // cout << "gyro2," << rx << "," << ry << "," << rz << endl;
     }
 
     Eigen::Vector3d acc(dx, dy, dz);
@@ -250,11 +249,6 @@ int main(int argc, char **argv)
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info);
 
-    if(add_noise)
-    {
-        simulator.GenerateNoiseOnGyroAccel();  
-    }
-
     if(argc != 2)
     {
         printf("please intput: rosrun vins vins_node [config file] \n"
@@ -268,6 +262,12 @@ int main(int argc, char **argv)
 
     readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量
     estimator.setParameter(); //SONG:为estimator设置参数，且启动重要线程: Estimator::processMeasurements
+
+    if(B_ADD_EXTRA_NOISE)
+    {
+        simulator.SetNoiseType(EXTRA_NOISE_IDX);
+        simulator.GenerateNoiseOnGyroAccel();  
+    }
 
 #ifdef EIGEN_DONT_PARALLELIZE
     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");

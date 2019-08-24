@@ -47,6 +47,8 @@ int MIN_DIST;
 double F_THRESHOLD;
 int SHOW_TRACK;
 int FLOW_BACK;
+int B_ADD_EXTRA_NOISE;
+int EXTRA_NOISE_IDX;
 
 
 template <typename T>
@@ -216,6 +218,23 @@ void readParameters(std::string config_file)
         ESTIMATE_EXTRINSIC = 0;
         ESTIMATE_TD = 0;
         printf("no imu, fix extrinsic param; no time offset calibration\n");
+    }
+
+    B_ADD_EXTRA_NOISE = fsSettings["b_add_extra_noise"];
+    cout << "b_add_extra_noise:" << B_ADD_EXTRA_NOISE << endl;
+
+    if(1 == B_ADD_EXTRA_NOISE)
+    {
+        EXTRA_NOISE_IDX = fsSettings["extra_noise_idx"];
+        cout << "extra_noise_idx:" << EXTRA_NOISE_IDX << endl;    
+    }
+    else if(0 == B_ADD_EXTRA_NOISE)
+    {
+        ;// do not add noise to imu.
+    }
+    else
+    {
+        cout << "Error: b_add_extra_noise should be set 0 or 1." << endl;
     }
 
     fsSettings.release();

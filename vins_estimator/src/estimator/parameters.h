@@ -64,6 +64,8 @@ extern int MIN_DIST;
 extern double F_THRESHOLD;
 extern int SHOW_TRACK;
 extern int FLOW_BACK;
+extern int B_ADD_EXTRA_NOISE;
+extern int EXTRA_NOISE_IDX;
 
 void readParameters(std::string config_file);
 
