@@ -21,7 +21,9 @@ Eigen::Matrix3d Utility::g2R(const Eigen::Vector3d &g)
     /*
     SONG: 上式求得的旋转矩阵R0满足：R0*ng1 = ng2
     */
-    double yaw = Utility::R2ypr(R0).x(); //SONG: 由姿态矩阵R 计算YPR.
+
+   //SONG: 又没有mag，此处的yaw怎么理解？需要debug看看。
+    double yaw = Utility::R2ypr(R0).x(); //SONG: R2ypr由姿态矩阵R计算YPR.
     R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0; //SONG: 将roll和pitch强制置零。感觉这个地方是有问题的！！！比如初始位置是在斜坡上呢？？？
     // R0 = Utility::ypr2R(Eigen::Vector3d{-90, 0, 0}) * R0;
     return R0;

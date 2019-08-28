@@ -347,7 +347,7 @@ void FeatureTracker::rejectWithF()
 }
 
 /*
-SONG:读取摄像机的内参。
+SONG:读取摄像机的内参和pinhole/mei/equ模型的校准参数。
 */
 void FeatureTracker::readIntrinsicParameter(const vector<string> &calib_file)
 {

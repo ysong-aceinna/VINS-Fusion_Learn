@@ -101,11 +101,12 @@ void Estimator::setParameter()
     mProcess.lock();
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
-        tic[i] = TIC[i]; //SONG:旋转和平移矩阵。
+        tic[i] = TIC[i]; //SONG:平移和旋转矩阵。
         ric[i] = RIC[i];
         cout << " exitrinsic cam " << i << endl  << ric[i] << endl << tic[i].transpose() << endl;
     }
-    f_manager.setRic(ric);   //SONG:sqrt_info是static变量
+    f_manager.setRic(ric);   
+    //SONG:sqrt_info是static变量。目前看不懂ProjectionTwoFrameOneCamFactor的功能。
     ProjectionTwoFrameOneCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity(); //SONG:Identity()单位矩阵
     ProjectionTwoFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
     ProjectionOneFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
@@ -161,19 +162,21 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
     }
 }
 
+//SONG:检测trackImage，放入featureBuf。featureBuf会在processMeasurements中被处理。
 void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
 {
     inputImageCnt++;
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
     TicToc featureTrackerTime;
 
+    //SONG:featureFrame是特征帧（坐标和速度等特征），而不是光流法里的特征点，不要混淆。
     if(_img1.empty())
         featureFrame = featureTracker.trackImage(t, _img);
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
     //printf("featureTracker time: %f\n", featureTrackerTime.toc());
 
-    //SONG:imgTrack是在输入图像上绘制特征点的图像。
+    //SONG:imgTrack是在输入图像上绘制红、绿、蓝特征点的图像。
     if (SHOW_TRACK)
     {
         cv::Mat imgTrack = featureTracker.getTrackImage();
@@ -194,13 +197,14 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         mBuf.lock();
         featureBuf.push(make_pair(t, featureFrame));
         mBuf.unlock();
-        TicToc processTime;
+        TicToc processTime; //SONG:计时。
         processMeasurements();
         printf("process time: %f\n", processTime.toc());
     }
     
 }
 
+//SONG:accel和gyro数据放accbuf和gyrbuf；IMU做预计分。
 void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vector3d &angularVelocity)
 {
     mBuf.lock();
@@ -209,7 +213,7 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
     //printf("input imu with time %f \n", t);
     mBuf.unlock();
 
-    //SONG:IMU的预计分。
+    //SONG:IMU的预计分。需要看论文了解预计分的原理。
     fastPredictIMU(t, linearAcceleration, angularVelocity);
     if (solver_flag == NON_LINEAR)
         pubLatestOdometry(latest_P, latest_Q, latest_V, t);
@@ -236,21 +240,31 @@ bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::
     }
     //printf("get imu from %f %f\n", t0, t1);
     //printf("imu fornt time %f   imu end time %f\n", accBuf.front().first, accBuf.back().first);
+
+    /*
+    SONG:将imuBuf中:
+       . <=t0 的部分删除；
+       . （t0, t1)的部分放到accVector和gyrVector
+       . >t1 的部分不动，即还
+    */
     if(t1 <= accBuf.back().first)
     {
         while (accBuf.front().first <= t0)//SONG:把早于t0的IMU数据从accBuf和gyrBuf中删除。
         {
-            accBuf.pop(); //SONG:queue:pop() 弹出队列的第一个元素
+            accBuf.pop();
             gyrBuf.pop(); 
         }
         while (accBuf.front().first < t1)
         {
             accVector.push_back(accBuf.front());
-            accBuf.pop();
+            accBuf.pop();//SONG: 用完即删。
             gyrVector.push_back(gyrBuf.front());
             gyrBuf.pop();
         }
-        accVector.push_back(accBuf.front()); //SONG: 上边的while循环已经把[t0, t1]间的数据都填充进accVector和gyrVector了，为啥还要再填充一个？
+
+        //SONG: 上边的while循环已经把[t0, t1]间的数据都填充进accVector和gyrVector了，
+        //为啥还要再填充一次？而且存入vector后也没有pop掉？我认为此处是bug，下边两行应该被注释掉。
+        accVector.push_back(accBuf.front()); 
         gyrVector.push_back(gyrBuf.front());
     }
     else
@@ -261,6 +275,7 @@ bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::
     return true;
 }
 
+//SONG:如果imubuf不为空，且相对t有新数据。
 bool Estimator::IMUAvailable(double t)
 {
     if(!accBuf.empty() && t <= accBuf.back().first)
@@ -279,14 +294,18 @@ void Estimator::processMeasurements()
         if(!featureBuf.empty())
         {
             feature = featureBuf.front();
-            curTime = feature.first + td;
+            //SONG:prevTime, curTime是收到的相邻两帧图像的时间戳。
+            //如果认为图像的接收有延时，即图像和IMU数据不同步，则通过td来做时间对齐（同步）。
+            curTime = feature.first + td; 
             while(1) //SONG:检查IMU数据可用，可用就直接跳出while，不可用就等5ms继续检查
-            {
+            {   //SONG:这里应该把!USE_IMU的判断提到while外边，否则有两个问题：
+                //1. !USE_IMU会影响效率，如果没有IMU的话，相当于每次都要进while循环。
+                //2. 如果没有IMU的话，也就不用判断IMUAvailable了。
                 if ((!USE_IMU  || IMUAvailable(feature.first + td)))
                     break;
                 else
                 {
-                    printf("wait for imu ... \n");
+                    printf("wait for imu ... \n");//SONG:用S1030经常发现有这个提示。单用EuRoC极少出现。
                     if (! MULTIPLE_THREAD)
                         return;
                     std::chrono::milliseconds dura(5);
@@ -294,8 +313,8 @@ void Estimator::processMeasurements()
                 }
             }
             mBuf.lock();
-            if(USE_IMU)
-                getIMUInterval(prevTime, curTime, accVector, gyrVector); //SONG:把从prevTime到curTime期间所有的imu数据放入accVector, gyrVector，用于计算IMU的 预计分
+            if(USE_IMU)//SONG:把从prevTime到curTime期间所有的imu数据放入accVector, gyrVector，用于计算IMU的预计分
+                getIMUInterval(prevTime, curTime, accVector, gyrVector); 
 
             featureBuf.pop();
             mBuf.unlock();
@@ -303,7 +322,9 @@ void Estimator::processMeasurements()
             if(USE_IMU)
             {
                 if(!initFirstPoseFlag)
-                    initFirstIMUPose(accVector);//SONG: 获取IMU的初始姿态，并赋给Rs[0]。
+                    //SONG: 获取IMU的初始姿态，并赋给Rs[0]。
+                    //有个问题：此时需要初始时的body要在静止状态，否则得到的初始姿态是不准的。
+                    initFirstIMUPose(accVector);
                 for(size_t i = 0; i < accVector.size(); i++)
                 {
                     double dt;
@@ -366,6 +387,9 @@ void Estimator::initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVecto
     //Vs[0] = Vector3d(5, 0, 0);
 }
 
+//SONG：全局搜了下，initFirstPose及initP，initR从未用过。
+//估计应该是用于外界已知初始姿态，调用此接口可做初始姿态的初始化。
+//这个在做融合算法时会用到，比如openRTK 先获取一个初始姿态给VINS，实现对齐。
 void Estimator::initFirstPose(Eigen::Vector3d p, Eigen::Matrix3d r)
 {
     Ps[0] = p;

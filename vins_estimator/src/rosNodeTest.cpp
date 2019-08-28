@@ -263,7 +263,7 @@ int main(int argc, char **argv)
     readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量
     estimator.setParameter(); //SONG:为estimator设置参数，且启动重要线程: Estimator::processMeasurements
 
-    if(B_ADD_EXTRA_NOISE)
+    if(B_ADD_EXTRA_NOISE)//SONG: add noise to IMU for simulation.
     {
         simulator.SetNoiseType(EXTRA_NOISE_IDX);
         simulator.GenerateNoiseOnGyroAccel();  
