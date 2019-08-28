@@ -53,7 +53,7 @@ void CSimulator::GenerateNoiseOnGyroAccel()
     cout << "Add accel_noise, mean:" << noise_model_array[idx].accel_noise_mean << "  stddev:" << noise_model_array[idx].accel_noise_stddev << endl;
     for(int i = 0; i < min(100,NOISE_BUF_LEN); i++)
     {
-        cout << gyro_noise[i] << endl;
+        cout << accel_noise[i] << endl;
     }
 
 }
