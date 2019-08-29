@@ -73,4 +73,4 @@ save_image: 1                   # save image in pose graph for visualization pru
 
 #simulation parameters
 b_add_extra_noise: 1     # add extra noise to IMU for simulation; you can close this function by setting 0.
-extra_noise_idx: 13      #element index of noise_model_array in "simulator.h"
+extra_noise_idx: 0      #element index of noise_model_array in "simulator.h"

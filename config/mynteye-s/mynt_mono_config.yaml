@@ -87,5 +87,5 @@ pose_graph_save_path: "/home/song/vins_fusion/pose_graph/" # save and load path
 save_image: 1                   # save image in pose graph for visualization prupose; you can close this function by setting 0 
 
 #simulation parameters
-b_add_extra_noise: 1     # add extra noise to IMU for simulation; you can close this function by setting 0.
+b_add_extra_noise: 0     # add extra noise to IMU for simulation; you can close this function by setting 0.
 extra_noise_idx: 1      #element index of noise_model_array in "simulator.h"
