@@ -22,12 +22,7 @@ struct NoiseModel
     real accel_noise_stddev;
 };
 
-NoiseModel noise_model_array[] = {
-    {0.0, 0.106562, 0.0, 0.0},              //ARW:0.8   VRW:0.11
-    {0.0, 0.177075, 0.0, 0.0},                   //ARW:1.0   VRW:0.11
-    {0.0, 0.31749, 0.0, 0.0},                   //ARW:1.5   VRW:0.11
-
-    {0.0, 0.177075, 0.0, 0.024037},              //ARW:1.0   VRW:0.15
+NoiseModel noise_model_array[] = {               //ARW:deg/√hr,  VRW:m/s/√hr
     {0.0, 0.106562, 0.0, 0.024037},              //ARW:0.8   VRW:0.15
     {0.0, 0.144222, 0.0, 0.0305505},             //ARW:0.9   VRW:0.17
     {0.0, 0.177075, 0.0, 0.03937},               //ARW:1.0   VRW:0.2
