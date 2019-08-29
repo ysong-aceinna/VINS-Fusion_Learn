@@ -131,7 +131,8 @@ void sync_process()
     }
 }
 
-
+//SONG: NOTE! Accelerations should be in m/s^2 (not in g's), 
+//and rotational velocity should be in rad/sec
 void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
 {
     double t = imu_msg->header.stamp.toSec();
@@ -151,9 +152,9 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
         dx += simulator.GetAccelNoise();
         dy += simulator.GetAccelNoise();
         dz += simulator.GetAccelNoise();
-        rx += simulator.GetGyroNoise();
-        ry += simulator.GetGyroNoise();
-        rz += simulator.GetGyroNoise();
+        rx += simulator.GetGyroNoise() / (180.0/M_PI);
+        ry += simulator.GetGyroNoise() / (180.0/M_PI);
+        rz += simulator.GetGyroNoise() / (180.0/M_PI);
 
         // cout << "accel2," << dx << "," << dy << "," << dz << endl;
         // cout << "gyro2," << rx << "," << ry << "," << rz << endl;

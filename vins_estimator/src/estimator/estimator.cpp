@@ -233,7 +233,7 @@ void Estimator::inputFeature(double t, const map<int, vector<pair<int, Eigen::Ma
 bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::Vector3d>> &accVector, 
                                 vector<pair<double, Eigen::Vector3d>> &gyrVector)
 {
-    if(accBuf.empty()) //SONG:accBuf存储了所有的IMU数据帧。
+    if(accBuf.empty())
     {
         printf("not receive imu\n");
         return false;
@@ -245,7 +245,7 @@ bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::
     SONG:将imuBuf中:
        . <=t0 的部分删除；
        . （t0, t1)的部分放到accVector和gyrVector
-       . >t1 的部分不动，即还
+       . >t1 的部分不动
     */
     if(t1 <= accBuf.back().first)
     {
@@ -313,7 +313,7 @@ void Estimator::processMeasurements()
                 }
             }
             mBuf.lock();
-            if(USE_IMU)//SONG:把从prevTime到curTime期间所有的imu数据放入accVector, gyrVector，用于计算IMU的预计分
+            if(USE_IMU)//SONG:把从prevTime到curTime期间所有的imu数据放入accVector, gyrVector
                 getIMUInterval(prevTime, curTime, accVector, gyrVector); 
 
             featureBuf.pop();
@@ -334,7 +334,7 @@ void Estimator::processMeasurements()
                         dt = curTime - accVector[i - 1].first;
                     else
                         dt = accVector[i].first - accVector[i - 1].first;
-                    //SONG:IMU预计分。
+                    //SONG:处理IMU数据。
                     processIMU(accVector[i].first, dt, accVector[i].second, gyrVector[i].second);
                 }
             }
@@ -398,7 +398,7 @@ void Estimator::initFirstPose(Eigen::Vector3d p, Eigen::Matrix3d r)
     initR = r;
 }
 
-//SONG:IMU预计分。
+//SONG:处理IMU数据，没看懂。
 void Estimator::processIMU(double t, double dt, const Vector3d &linear_acceleration, const Vector3d &angular_velocity)
 {
     if (!first_imu)
