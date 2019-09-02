@@ -23,6 +23,9 @@ struct NoiseModel
 };
 
 NoiseModel noise_model_array[] = {               //ARW:deg/√hr,  VRW:m/s/√hr
+    {0.0, 0.689783, 0.0, 0.114964},              //ARW:3.0   VRW:0.5
+    {0.0, 2.35188, 0.0, 0.470691},               //ARW:10.0   VRW:2.0
+
     {0.0, 0.106562, 0.0, 0.024037},              //ARW:0.8   VRW:0.15
     {0.0, 0.144222, 0.0, 0.0305505},             //ARW:0.9   VRW:0.17
     {0.0, 0.177075, 0.0, 0.03937},               //ARW:1.0   VRW:0.2
@@ -35,7 +38,8 @@ NoiseModel noise_model_array[] = {               //ARW:deg/√hr,  VRW:m/s/√hr
     {1.0, 0.0, 0.0, 0.0},                       //gyro_bias:1.0 deg/s
     {2.0, 0.0, 0.0, 0.0},                       //gyro_bias:2.0 deg/s
     {3.0, 0.0, 0.0, 0.0},                       //gyro_bias:3.0 deg/s
-    {0.0, 0.0, 0.3, 0.0},                       //accel_bias:0.3 m/s^2
+    {0.0, 0.0, 0.5, 0.0},                       //accel_bias:0.5 m/s^2
+    {0.0, 0.0, 1.0, 0.0},                       //accel_bias:1.0 m/s^2
     {0.0, 0.0, 1.2, 0.0},                       //accel_bias:1.2 m/s^2
     {0.0, 0.0, 1.5, 0.0},                       //accel_bias:1.5 m/s^2
     {0.0, 0.0, 3.0, 0.0},                       //accel_bias:3.0 m/s^2
