@@ -18,7 +18,7 @@ using namespace Eigen;
 class IntegrationBase
 {
   public:
-    IntegrationBase() = delete;
+    IntegrationBase() = delete; //SONG: C++11 表示删除默认构造函数,个人理解相当与之前将构造函数设为Private,效果相同.
     IntegrationBase(const Eigen::Vector3d &_acc_0, const Eigen::Vector3d &_gyr_0,
                     const Eigen::Vector3d &_linearized_ba, const Eigen::Vector3d &_linearized_bg)
         : acc_0{_acc_0}, gyr_0{_gyr_0}, linearized_acc{_acc_0}, linearized_gyr{_gyr_0},

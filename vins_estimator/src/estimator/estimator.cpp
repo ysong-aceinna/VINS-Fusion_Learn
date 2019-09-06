@@ -15,6 +15,12 @@ Estimator::Estimator(): f_manager{Rs}
     ROS_INFO("init begins");
     initThreadFlag = false;
     clearState();
+    m_foutIMUBias = ofstream("aaa.csv", ios::app);
+    if (!m_foutIMUBias)
+    {
+        cout << "" << endl;
+        exit(EXIT_FAILURE);
+    }
 }
 
 Estimator::~Estimator()
@@ -24,6 +30,8 @@ Estimator::~Estimator()
         processThread.join();
         printf("join thread \n");
     }
+
+    m_foutIMUBias.close();    
 }
 
 void Estimator::clearState()
@@ -478,6 +486,9 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         }
     }
 
+    //SONG:初始化:
+    //  1. 当滑动窗口buf全部被填满后(frame_count == WINDOW_SIZE), 做初始化
+    //  2. 初始化成功后,将solver_flag = NON_LINEAR, 并做一次optimization
     if (solver_flag == INITIAL)
     {
         // monocular + IMU initilization
@@ -545,6 +556,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             }
         }
 
+        //SONG:滑动窗口buf未被填满前, 用buf[i-1]填充buf[i]
         if(frame_count < WINDOW_SIZE)
         {
             frame_count++;
@@ -1028,7 +1040,11 @@ bool Estimator::failureDetection()
 void Estimator::optimization()
 {
     TicToc t_whole, t_prepare;
+    // cout << "Bas1:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
+    // cout << "Bgs1:" << Bgs[10].transpose() << "," << para_SpeedBias[10][6]<< "," << para_SpeedBias[10][7]<< "," << para_SpeedBias[10][8] << endl;
     vector2double();
+    // cout << "Bas2:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
+    // cout << "Bgs2:" << Bgs[10].transpose() << "," << para_SpeedBias[10][6]<< "," << para_SpeedBias[10][7]<< "," << para_SpeedBias[10][8] << endl;
 
     ceres::Problem problem;
     ceres::LossFunction *loss_function;
@@ -1154,7 +1170,11 @@ void Estimator::optimization()
     ROS_DEBUG("Iterations : %d", static_cast<int>(summary.iterations.size()));
     //printf("solver costs: %f \n", t_solver.toc());
 
+    // cout << "Bas3:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
+    // cout << "Bgs3:" << Bgs[10].transpose() << "," << para_SpeedBias[10][6]<< "," << para_SpeedBias[10][7]<< "," << para_SpeedBias[10][8] << endl;
     double2vector();
+    // cout << "Bas4:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
+    // cout << "Bgs4:" << Bgs[10].transpose() << "," << para_SpeedBias[10][6]<< "," << para_SpeedBias[10][7]<< "," << para_SpeedBias[10][8] << endl;
     //printf("frame_count: %d \n", frame_count);
 
     if(frame_count < WINDOW_SIZE)
@@ -1631,4 +1651,25 @@ void Estimator::updateLatestStates()
         tmp_gyrBuf.pop();
     }
     mBuf.unlock();
+
+    // cout << "latest_time:" << fixed << setprecision(3) << latest_time << "(s)" << endl;
+    // printf("t: %f\n", latest_time);
+    // cout << latest_Ba.transpose() << "," << latest_Bg.transpose() << endl;
+    saveIMUBias(latest_time, latest_Ba, latest_Bg);
+}
+
+//SONG: 保存accel和gyro的bias到文件.
+//time IS header.stamp.toSec();
+void Estimator::saveIMUBias(double time, const Eigen::Vector3d accel_bias, const Eigen::Vector3d gyro_bias)
+{
+    m_foutIMUBias.setf(ios::fixed, ios::floatfield); // ios_base::fixed:设置cout为定点输出格式; ios_base::floatfield:设置输出时按浮点格式，小数点后有6位数字
+    // m_foutIMUBias.precision(0);
+    m_foutIMUBias << time /** 1e9 */ << ",";
+    // m_foutIMUBias.precision(5);
+    m_foutIMUBias << accel_bias.x() << ","
+                  << accel_bias.y() << ","
+                  << accel_bias.z() << ","
+                  << gyro_bias.x()  << ","
+                  << gyro_bias.y()  << ","
+                  << gyro_bias.z()  << endl;
 }

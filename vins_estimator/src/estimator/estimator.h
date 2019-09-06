@@ -8,7 +8,6 @@
  *******************************************************/
 
 #pragma once
- 
 #include <thread>
 #include <mutex>
 #include <std_msgs/Header.h>
@@ -79,6 +78,9 @@ class Estimator
     void fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity);
     bool IMUAvailable(double t);
     void initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVector);
+
+    void saveIMUBias(double time, const Eigen::Vector3d accel_bias, const Eigen::Vector3d gyro_bias);
+    ofstream m_foutIMUBias;
 
     enum SolverFlag
     {
