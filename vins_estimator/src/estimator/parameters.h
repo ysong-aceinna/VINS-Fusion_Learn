@@ -32,8 +32,8 @@ extern int ESTIMATE_EXTRINSIC;
 extern double ACC_N, ACC_W;
 extern double GYR_N, GYR_W;
 
-extern std::vector<Eigen::Matrix3d> RIC;
-extern std::vector<Eigen::Vector3d> TIC;
+extern std::vector<Eigen::Matrix3d> RIC; //SONG:CAM0到body(IMU)的旋转矩阵。
+extern std::vector<Eigen::Vector3d> TIC; //SONG:CAM0到body(IMU)的平移向量。
 extern Eigen::Matrix3d R_IMU2Body;
 extern Eigen::Vector3d G;
 

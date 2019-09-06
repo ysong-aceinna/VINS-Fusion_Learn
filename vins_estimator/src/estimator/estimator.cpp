@@ -101,7 +101,7 @@ void Estimator::setParameter()
     mProcess.lock();
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
-        tic[i] = TIC[i]; //SONG:平移和旋转矩阵。
+        tic[i] = TIC[i]; //SONG:cam0到body(IMU)的平移和旋转矩阵。
         ric[i] = RIC[i];
         cout << " exitrinsic cam " << i << endl  << ric[i] << endl << tic[i].transpose() << endl;
     }
@@ -216,7 +216,7 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
     //SONG:IMU的预计分。需要看论文了解预计分的原理。
     fastPredictIMU(t, linearAcceleration, angularVelocity);
     if (solver_flag == NON_LINEAR)
-        pubLatestOdometry(latest_P, latest_Q, latest_V, t);
+        pubLatestOdometry(latest_P, latest_Q, latest_V, t); //SONG: Pub topic "imu_propagate".
 }
 
 void Estimator::inputFeature(double t, const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &featureFrame)
@@ -575,6 +575,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             
         ROS_DEBUG("solver costs: %fms", t_solve.toc());
 
+//SONG: 失效自检测，自动重启算法。实际上由于failureDetection强制return false，所以下边的if永远没有执行。
         if (failureDetection())
         {
             ROS_WARN("failure detection!");
@@ -1591,6 +1592,7 @@ void Estimator::outliersRejection(set<int> &removeIndex)
     }
 }
 //SONG:IMU的预计分。须要结合论文算法来理解。
+//
 void Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity)
 {
     double dt = t - latest_time; //SONG:Delta t
