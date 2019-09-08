@@ -80,7 +80,7 @@ class Estimator
     void initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVector);
 
     void saveIMUBias(double time, const Eigen::Vector3d accel_bias, const Eigen::Vector3d gyro_bias);
-    ofstream m_foutIMUBias;
+    ofstream m_fout_imu_bias;
 
     enum SolverFlag
     {

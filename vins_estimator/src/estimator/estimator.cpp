@@ -15,8 +15,8 @@ Estimator::Estimator(): f_manager{Rs}
     ROS_INFO("init begins");
     initThreadFlag = false;
     clearState();
-    m_foutIMUBias = ofstream("aaa.csv", ios::app);
-    if (!m_foutIMUBias)
+    m_fout_imu_bias = ofstream("imu_bias.csv", ios::app);
+    if (!m_fout_imu_bias)
     {
         cout << "" << endl;
         exit(EXIT_FAILURE);
@@ -31,7 +31,7 @@ Estimator::~Estimator()
         printf("join thread \n");
     }
 
-    m_foutIMUBias.close();    
+    m_fout_imu_bias.close();    
 }
 
 void Estimator::clearState()
@@ -1662,11 +1662,11 @@ void Estimator::updateLatestStates()
 //time IS header.stamp.toSec();
 void Estimator::saveIMUBias(double time, const Eigen::Vector3d accel_bias, const Eigen::Vector3d gyro_bias)
 {
-    m_foutIMUBias.setf(ios::fixed, ios::floatfield); // ios_base::fixed:设置cout为定点输出格式; ios_base::floatfield:设置输出时按浮点格式，小数点后有6位数字
-    // m_foutIMUBias.precision(0);
-    m_foutIMUBias << time /** 1e9 */ << ",";
-    // m_foutIMUBias.precision(5);
-    m_foutIMUBias << accel_bias.x() << ","
+    m_fout_imu_bias.setf(ios::fixed, ios::floatfield); // ios_base::fixed:设置cout为定点输出格式; ios_base::floatfield:设置输出时按浮点格式，小数点后有6位数字
+    // m_fout_imu_bias.precision(0);
+    m_fout_imu_bias << time /** 1e9 */ << ",";
+    // m_fout_imu_bias.precision(5);
+    m_fout_imu_bias << accel_bias.x() << ","
                   << accel_bias.y() << ","
                   << accel_bias.z() << ","
                   << gyro_bias.x()  << ","
