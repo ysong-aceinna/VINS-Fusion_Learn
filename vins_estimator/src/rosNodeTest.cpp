@@ -143,28 +143,28 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     double ry = imu_msg->angular_velocity.y;
     double rz = imu_msg->angular_velocity.z;
 
-    //SONG:add noise to IMU for simulation.
-    if(B_ADD_EXTRA_NOISE)
-    {
-        // cout << "accel1," << dx << "," << dy << "," << dz << endl;
-        // cout << "gyro1," << rx << "," << ry << "," << rz << endl;
-
-        dx += simulator.GetAccelNoise();
-        dy += simulator.GetAccelNoise();
-        dz += simulator.GetAccelNoise();
-        rx += simulator.GetGyroNoise() / (180.0/M_PI);
-        ry += simulator.GetGyroNoise() / (180.0/M_PI);
-        rz += simulator.GetGyroNoise() / (180.0/M_PI);
-
-        // cout << "accel2," << dx << "," << dy << "," << dz << endl;
-        // cout << "gyro2," << rx << "," << ry << "," << rz << endl;
-    }
-
     Eigen::Vector3d acc(dx, dy, dz);
     Eigen::Vector3d gyr(rx, ry, rz);
     
-    // estimator.inputIMU(t, acc, gyr);
-    estimator.inputIMU(t, R_IMU2Body*acc, R_IMU2Body*gyr);
+    acc = R_IMU2Body*acc;
+    gyr = R_IMU2Body*gyr;
+
+    //SONG:add noise to IMU for simulation.
+    if(B_ADD_EXTRA_NOISE)
+    {
+        // cout << "accel1," << acc.x() << "," << acc.y() << "," << acc.z() << endl;
+        // cout << "gyro1," << gyr.x() << "," << gyr.y() << "," << gyr.z() << endl;
+        acc(0) += simulator.GetAccelNoise();
+        acc(1) += simulator.GetAccelNoise();
+        acc(2) += simulator.GetAccelNoise();
+        gyr(0) += simulator.GetGyroNoise() / (180.0/M_PI);
+        gyr(1) += simulator.GetGyroNoise() / (180.0/M_PI);
+        gyr(2) += simulator.GetGyroNoise() / (180.0/M_PI);
+        // cout << "accel2," << acc.x() << "," << acc.y() << "," << acc.z() << endl;
+        // cout << "gyro2," << gyr.x() << "," << gyr.y() << "," << gyr.z() << endl;
+    }
+
+    estimator.inputIMU(t, acc, gyr);
     return;
 }
 

@@ -15,10 +15,10 @@ Estimator::Estimator(): f_manager{Rs}
     ROS_INFO("init begins");
     initThreadFlag = false;
     clearState();
-    m_fout_imu_bias = ofstream("imu_bias.csv", ios::app);
+    m_fout_imu_bias = ofstream("/home/song/catkin_ws/imu_bias.csv", ios::app);
     if (!m_fout_imu_bias)
     {
-        cout << "" << endl;
+        cout << "open file failed! Exit ..." << endl;
         exit(EXIT_FAILURE);
     }
 }
