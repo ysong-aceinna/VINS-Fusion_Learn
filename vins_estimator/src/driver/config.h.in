@@ -1,0 +1,2 @@
+#cmakedefine ENABLE_MYNT_SDK
+#cmakedefine ENABLE_MYNT_ROS

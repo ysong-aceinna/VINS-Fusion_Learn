@@ -1,12 +1,16 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vins)
 
-set(COMPILE_TYPE Release)  #Debug Release
+############### Choose driver type #################
+option (ENABLE_MYNT_SDK "Enable MYNT SDK." OFF)
+option (ENABLE_MYNT_ROS "Enable MYNT ROS driver." ON)
+####################################################
 
+############## Set Release or Debug ################
+set(COMPILE_TYPE Release)
 if(COMPILE_TYPE STREQUAL "Release")
   set(CMAKE_BUILD_TYPE "Release")
   set(CMAKE_CXX_FLAGS "-std=c++11")
-  #-DEIGEN_USE_MKL_ALL")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 elseif(COMPILE_TYPE STREQUAL "Debug")
   SET(CMAKE_BUILD_TYPE "Debug")
@@ -14,35 +18,61 @@ elseif(COMPILE_TYPE STREQUAL "Debug")
 else()
   message(FATAL_ERROR "COMPILE_TYPE is Error!")
 endif()
-  message(WARNING "COMPILE_TYPE = ${COMPILE_TYPE}") #make this msg highlight. 
+  message(AUTHOR_WARNING "COMPILE_TYPE = ${COMPILE_TYPE}")
+####################################################
+find_package(Threads REQUIRED)
 
-find_package(catkin REQUIRED COMPONENTS
-    roscpp
-    std_msgs
-    geometry_msgs
-    nav_msgs
-    tf
-    cv_bridge
-    camera_models
-    image_transport)
+##################### setting ######################
+configure_file (
+  "${PROJECT_SOURCE_DIR}/src/driver/config.h.in"
+  "${PROJECT_BINARY_DIR}/config.h"
+  )
 
-find_package(OpenCV REQUIRED)
-
-message(WARNING "OpenCV_VERSION: ${OpenCV_VERSION}")
-
-find_package(Ceres REQUIRED)
-
-include_directories(${catkin_INCLUDE_DIRS} ${CERES_INCLUDE_DIRS})
-
+set(CMAKE_INCLUDE_CURRENT_DIR ON) #used to find config.h
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-find_package(Eigen3)
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-  ${EIGEN3_INCLUDE_DIR}
-)
 
-catkin_package()
+# set(MINIGLOG_PATH ${PROJECT_SOURCE_DIR}/src/miniglog)
+# ###libminiglog.dylib for Mac and libminiglog.so for Linux in below line.
+# set(MINIGLOG_LIBS ${MINIGLOG_PATH}/build/lib/libminiglog.so) 
+# set(MINIGLOG_INCLUDE_DIRS ${MINIGLOG_PATH}/build/include)
+set(DRIVER_LIBS driver_lib)
+####################################################
 
+############## find relevant packages ##############
+find_package(Ceres REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(OpenCV REQUIRED)
+message(AUTHOR_WARNING "OpenCV_VERSION: ${OpenCV_VERSION}")
+####################################################
+
+############## include_directories #################
+include_directories(${CERES_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
+####################################################
+
+################# set by switch ####################
+if (ENABLE_MYNT_SDK)
+  set(DRIVER_LIBS ${DRIVER_LIBS} mynteye)
+elseif(ENABLE_MYNT_ROS)
+  catkin_package()
+  find_package(catkin REQUIRED COMPONENTS
+      roscpp
+      std_msgs
+      geometry_msgs
+      nav_msgs
+      tf
+      cv_bridge
+      camera_models
+      image_transport)
+  include_directories(${catkin_INCLUDE_DIRS})
+  set(DRIVER_LIBS ${DRIVER_LIBS} ${catkin_LIBRARIES})
+endif()
+####################################################
+
+################ Add subdirectory ##################
+add_subdirectory( ${PROJECT_SOURCE_DIR}/src/driver)
+####################################################
+
+############### Generate lib and exe ###############
 add_library(vins_lib
     src/estimator/parameters.cpp
     src/estimator/estimator.cpp
@@ -55,26 +85,12 @@ add_library(vins_lib
     src/utility/utility.cpp
     src/utility/visualization.cpp
     src/utility/CameraPoseVisualization.cpp
-    src/utility/simulator.cpp
     src/initial/solve_5pts.cpp
     src/initial/initial_aligment.cpp
     src/initial/initial_sfm.cpp
     src/initial/initial_ex_rotation.cpp
     src/featureTracker/feature_tracker.cpp)
-target_link_libraries(vins_lib ${catkin_LIBRARIES} ${OpenCV_LIBS} ${CERES_LIBRARIES})
+target_link_libraries(vins_lib  ${OpenCV_LIBS} ${CERES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
-
-add_executable(vins_node src/rosNodeTest.cpp)
-target_link_libraries(vins_node vins_lib) 
-
-#SONG:Do not complile kitti_XX for saving time.
-#add_executable(kitti_odom_test src/KITTIOdomTest.cpp)
-#target_link_libraries(kitti_odom_test vins_lib) 
-
-#add_executable(kitti_gps_test src/KITTIGPSTest.cpp)
-#target_link_libraries(kitti_gps_test vins_lib) 
-
-#added by SONG for test
-#add_executable(mytest src/mytest.cpp)
-#target_link_libraries(mytest vins_lib) 
-
+add_executable(vins_node src/main.cpp)
+target_link_libraries(vins_node vins_lib ${DRIVER_LIBS}) 
