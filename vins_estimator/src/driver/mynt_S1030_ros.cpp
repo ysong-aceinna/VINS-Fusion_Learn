@@ -45,6 +45,7 @@ void CMyntS1030ROSDriver::Start()
   ros::Subscriber sub_restart = n.subscribe("/vins_restart", 100, &CMyntS1030ROSDriver::restart_callback, this);
   ros::Subscriber sub_imu_switch = n.subscribe("/vins_imu_switch", 100, &CMyntS1030ROSDriver::imu_switch_callback, this);
   ros::Subscriber sub_cam_switch = n.subscribe("/vins_cam_switch", 100, &CMyntS1030ROSDriver::cam_switch_callback, this);
+  LOG(INFO) << "Subscribe done...";
   ros::spin();
 }
 
