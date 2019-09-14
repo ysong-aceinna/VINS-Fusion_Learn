@@ -14,19 +14,9 @@
 #include <opencv2/opencv.hpp>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/Imu.h>
-// #include <std_msgs/Header.h>
-// #include <std_msgs/Float32.h>
 #include <std_msgs/Bool.h>
 #include <sensor_msgs/PointCloud.h>
-// #include <sensor_msgs/image_encodings.h>
-// #include <nav_msgs/Path.h>
-// #include <nav_msgs/Odometry.h>
-// #include <geometry_msgs/PointStamped.h>
-// #include <visualization_msgs/Marker.h>
-// #include <tf/transform_broadcaster.h>
 #include <opencv2/highgui/highgui.hpp>
-
-#include "../utility/visualization.h"
 
 #include "driver.h"
 #include "cv_painter.h"
@@ -39,8 +29,8 @@ public:
   CMyntS1030ROSDriver();
   virtual ~CMyntS1030ROSDriver();
 
-  virtual int Init();
-  virtual int Init(int argc, char **argv);
+  virtual bool Init();
+  virtual bool Init(int argc, char **argv);
   virtual void Start();
   virtual void Stop();
   virtual void ThreadGetData();

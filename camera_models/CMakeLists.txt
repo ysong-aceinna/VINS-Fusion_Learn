@@ -1,14 +1,21 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(camera_models)
 
+############### Choose driver type #################
+option (ENABLE_SDK "Enable SDK." OFF)
+option (ENABLE_ROS "Enable ROS driver." ON)
+####################################################
+
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "-std=c++11")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fPIC")
 
-find_package(catkin REQUIRED COMPONENTS
-    roscpp
-    std_msgs
-    )
+if (ENABLE_ROS)
+    find_package(catkin REQUIRED COMPONENTS
+        roscpp
+        std_msgs
+        )
+endif()
 
 find_package(Boost REQUIRED COMPONENTS filesystem program_options system)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -19,17 +26,19 @@ find_package(OpenCV REQUIRED)
 find_package(Ceres REQUIRED)
 include_directories(${CERES_INCLUDE_DIRS})
 
-
-catkin_package(
-    INCLUDE_DIRS include
-    LIBRARIES camera_models
-    CATKIN_DEPENDS roscpp std_msgs
-#    DEPENDS system_lib
-    )
-
-include_directories(
-    ${catkin_INCLUDE_DIRS}
-    )
+if (ENABLE_ROS)
+    catkin_package(
+        INCLUDE_DIRS include
+        LIBRARIES camera_models
+        CATKIN_DEPENDS roscpp std_msgs
+    #    DEPENDS system_lib
+        )
+    include_directories(
+        ${catkin_INCLUDE_DIRS}
+        )
+else ()
+    set(BUILD_SHARED SHARED)
+endif()
 
 include_directories("include")
 
@@ -50,6 +59,7 @@ add_executable(Calibrations
     src/gpl/EigenQuaternionParameterization.cc)
 
 add_library(camera_models
+    ${BUILD_SHARED}
     src/chessboard/Chessboard.cc
     src/calib/CameraCalibration.cc
     src/camera_models/Camera.cc

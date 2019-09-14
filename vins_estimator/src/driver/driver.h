@@ -45,8 +45,8 @@ public:
     //     m_bmono = b_mono;
     // }
 
-    virtual int Init() = 0;
-    virtual int Init(int argc, char **argv) = 0;
+    virtual bool Init() = 0;
+    virtual bool Init(int argc, char **argv) = 0;
     virtual void Start() = 0;
     virtual void Stop() = 0;
     virtual void ThreadGetData() = 0;

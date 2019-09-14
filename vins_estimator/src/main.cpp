@@ -44,7 +44,11 @@ int main(int argc, char **argv)
     readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量 !!!!! 改为单态
 
     pdriver->ReadParameters(config_file);
-    pdriver->Init(argc, argv);
+    if(! pdriver->Init(argc, argv))
+    {
+        LOG(ERROR) << "Driver initialization failed!";
+        exit(EXIT_FAILURE);
+    }
 
     CAdapter* padapter = new CAdapter();
     pdriver->AddListener(padapter);

@@ -19,8 +19,8 @@ public:
   CMyntS1030Driver();
   virtual ~CMyntS1030Driver();
 
-  virtual int Init();
-  virtual int Init(int argc, char **argv);
+  virtual bool Init();
+  virtual bool Init(int argc, char **argv);
   virtual void Start();
   virtual void Stop();
   virtual void ThreadGetData();

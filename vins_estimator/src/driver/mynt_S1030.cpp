@@ -20,22 +20,26 @@ CMyntS1030Driver::~CMyntS1030Driver()
   cout << "CMyntS1030Driver:~CMyntS1030Driver()" << endl;
 }
 
-int CMyntS1030Driver::Init()
+bool CMyntS1030Driver::Init()
 {
-  return 0;
+  return true;
 }
 
-int CMyntS1030Driver::Init(int argc, char **argv)
+bool CMyntS1030Driver::Init(int argc, char **argv)
 {
+  LOG(INFO) << "CMyntS1030Driver::Init()";
   m_api = API::Create(argc, argv); //"/mnt/wind/project/camera-driver/test/build/driver_demo"
   if (!m_api)
-    return 1;
+  {  
+    LOG(WARNING) << "API::Create() failed!";
+    return false;
+  }
   auto request = m_api->GetStreamRequest();
   request.width = m_width;
   request.height = m_height;
   m_api->ConfigStreamRequest(request);
 
-  return 0;
+  return true;
 }
 
 void CMyntS1030Driver::Start()

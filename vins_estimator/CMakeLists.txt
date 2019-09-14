@@ -27,25 +27,22 @@ configure_file (
   "${PROJECT_SOURCE_DIR}/src/driver/config.h.in"
   "${PROJECT_BINARY_DIR}/config.h"
   )
-  message(AUTHOR_WARNING "PROJECT_BINARY_DIR = ${PROJECT_BINARY_DIR}")
 
 # set(CMAKE_INCLUDE_CURRENT_DIR ON) #used to find config.h
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-#要调试一下ros 和sdk版本的${PROJECT_SOURCE_DIR}是否相同.
 set(MINIGLOG_PATH ${PROJECT_SOURCE_DIR}/src/miniglog)
 ###libminiglog.dylib for Mac and libminiglog.so for Linux in below line.
 set(MINIGLOG_LIBS ${MINIGLOG_PATH}/build/lib/libminiglog.so) 
 set(MINIGLOG_INCLUDE_DIRS ${MINIGLOG_PATH}/build/include)
 
-
 if (ENABLE_MYNT_SDK)
   set(CAMERA_MODELS_PATH ${PROJECT_SOURCE_DIR}/../camera_models)
-  set(CAMERA_MODELS_LIBS ${CAMERA_MODELS_PATH}/build/libcamera_models.a) 
+  set(CAMERA_MODELS_LIB ${CAMERA_MODELS_PATH}/build/libcamera_models.so) 
   set(CAMERA_MODELS_INCLUDE_DIRS ${CAMERA_MODELS_PATH}/include)
+  include_directories(${CAMERA_MODELS_INCLUDE_DIRS})
 endif()
 
-# set(DRIVER_LIBS driver_lib)
 ####################################################
 
 ############## find relevant packages ##############
@@ -68,11 +65,12 @@ set(DRIVER_SOURCES
 
 ################# set by switch ####################
 if (ENABLE_MYNT_SDK)
-  set(DRIVER_LIBS ${DRIVER_LIBS} mynteye)
+  set(DRIVER_LIBS mynteye)
 
   set(DRIVER_SOURCES ${DRIVER_SOURCES} 
     src/driver/mynt_S1030.cpp
     src/utility/visual_sdk.cpp)
+
 elseif(ENABLE_MYNT_ROS)
   catkin_package()
   find_package(catkin REQUIRED COMPONENTS
@@ -85,19 +83,14 @@ elseif(ENABLE_MYNT_ROS)
       camera_models
       image_transport)
   include_directories(${catkin_INCLUDE_DIRS})
-  set(DRIVER_LIBS ${DRIVER_LIBS} ${catkin_LIBRARIES})
+  set(DRIVER_LIBS ${catkin_LIBRARIES})
 
   set(DRIVER_SOURCES ${DRIVER_SOURCES} 
   src/driver/mynt_S1030_ros.cpp
   src/utility/visual_ros.cpp
-  src/utility/visualization.cpp
   src/utility/CameraPoseVisualization.cpp)
 
 endif()
-####################################################
-
-################ Add subdirectory ##################
-# add_subdirectory( ${PROJECT_SOURCE_DIR}/src/driver)
 ####################################################
 
 ############### Generate lib and exe ###############
@@ -117,7 +110,7 @@ add_library(vins_lib
     src/initial/initial_sfm.cpp
     src/initial/initial_ex_rotation.cpp
     src/featureTracker/feature_tracker.cpp)
-target_link_libraries(vins_lib  ${MINIGLOG_LIBS} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(vins_lib ${CAMERA_MODELS_LIB}  ${MINIGLOG_LIBS} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable(vins_node src/main.cpp)
 target_link_libraries(vins_node vins_lib ${DRIVER_LIBS}) 

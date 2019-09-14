@@ -15,15 +15,15 @@ CMyntS1030ROSDriver::~CMyntS1030ROSDriver()
   cout << "CMyntS1030ROSDriver:~CMyntS1030ROSDriver()" << endl;
 }
 
-int CMyntS1030ROSDriver::Init()
+bool CMyntS1030ROSDriver::Init()
 {
-  return 0;
+  return true;
 }
 
-int CMyntS1030ROSDriver::Init(int argc, char **argv)
+bool CMyntS1030ROSDriver::Init(int argc, char **argv)
 {
   ros::init(argc, argv, "vins_estimator");
-  return 0;
+  return true;
 }
 
 /*
