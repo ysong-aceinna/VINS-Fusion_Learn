@@ -10,7 +10,7 @@
 #include <mutex>
 #include <opencv2/opencv.hpp>
 #include "struct.h"
-#include <glog/logging.h>
+#include "mglog.h"
 #include "macro.h"
 #include "../estimator/estimator.h"
 #include "simulator.h"
@@ -21,7 +21,7 @@ using namespace std;
 class CAdapter 
 {
 private:
-    Estimator estimator;
+    Estimator* m_pestimator;
     queue<SImuData> imu_buf;
     // queue<sensor_msgs::PointCloudConstPtr> feature_buf;
     queue<SImgData> img0_buf;

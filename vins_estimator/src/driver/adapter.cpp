@@ -7,7 +7,7 @@
 
 CAdapter::CAdapter(/* args */)
 {
-    // std::thread sync_thread{sync_process};
+    m_pestimator = new Estimator();    
     thread_sync = std::thread(&CAdapter::sync_process, this);
 
     if(B_ADD_EXTRA_NOISE)//SONG: add noise to IMU for simulation.
@@ -15,7 +15,7 @@ CAdapter::CAdapter(/* args */)
         simulator.SetNoiseType(EXTRA_NOISE_IDX);
         simulator.GenerateNoiseOnGyroAccel();  
     }
-    estimator.setParameter(); //SONG:为estimator设置参数，且启动重要线程: Estimator::processMeasurements
+    m_pestimator->setParameter(); //SONG:为estimator设置参数，且启动重要线程: Estimator::processMeasurements
 }
 
 CAdapter::~CAdapter()
@@ -59,7 +59,15 @@ void CAdapter::UpdateIMU(SImuData& imu)
 
     Eigen::Vector3d acc(imu.accel[0], imu.accel[1], imu.accel[2]);
     Eigen::Vector3d gyr(imu.gyro[0], imu.gyro[1], imu.gyro[2]);
-    
+
+    /*
+    Debug info (EuRoC):
+    timestamp: 1403636858.996666 ,accel: 9.504278 , -0.473988 , -3.031889 ,gyro: -0.129852 , -0.012566 , 0.034907
+    */
+    // ROS_INFO_STREAM("timestamp: " << setiosflags(ios::fixed) << imu.timestamp
+    // << " ,accel: " << acc[0] << " , " << acc[1] << " , " << acc[2]
+    // << " ,gyro: " << gyr[0] << " , " << gyr[1] << " , " << gyr[2] );
+
     acc = R_IMU2Body*acc;
     gyr = R_IMU2Body*gyr;
 
@@ -78,7 +86,15 @@ void CAdapter::UpdateIMU(SImuData& imu)
         // cout << "gyro2," << gyr.x() << "," << gyr.y() << "," << gyr.z() << endl;
     }
 
-    estimator.inputIMU(imu.timestamp, acc, gyr);
+    /*
+    Debug info (EuRoC):
+    timestamp: 1403636858.996666 ,accel: -3.031889 , 0.473988 , 9.504278 ,gyro: 0.034907 , 0.012566 , -0.129852
+    */
+    // ROS_INFO_STREAM("timestamp: " << setiosflags(ios::fixed) << imu.timestamp
+    // << " ,accel: " << acc[0] << " , " << acc[1] << " , " << acc[2]
+    // << " ,gyro: " << gyr[0] << " , " << gyr[1] << " , " << gyr[2] );
+
+    m_pestimator->inputIMU(imu.timestamp, acc, gyr);
     return;    
 }
 
@@ -120,12 +136,11 @@ void CAdapter::sync_process()
             }
             m_buf.unlock();
             if(!image0.empty())
-                estimator.inputImage(time, image0, image1);
+                m_pestimator->inputImage(time, image0, image1);
         }
         else
         {
             cv::Mat image;
-            std_msgs::Header header;
             double time = 0;
             m_buf.lock();
             if(!img0_buf.empty())
@@ -136,7 +151,7 @@ void CAdapter::sync_process()
             }
             m_buf.unlock();
             if(!image.empty())
-                estimator.inputImage(time, image);
+                m_pestimator->inputImage(time, image);
         }
 
         std::chrono::milliseconds dura(2);

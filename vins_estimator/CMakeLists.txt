@@ -27,15 +27,25 @@ configure_file (
   "${PROJECT_SOURCE_DIR}/src/driver/config.h.in"
   "${PROJECT_BINARY_DIR}/config.h"
   )
+  message(AUTHOR_WARNING "PROJECT_BINARY_DIR = ${PROJECT_BINARY_DIR}")
 
-set(CMAKE_INCLUDE_CURRENT_DIR ON) #used to find config.h
+# set(CMAKE_INCLUDE_CURRENT_DIR ON) #used to find config.h
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-# set(MINIGLOG_PATH ${PROJECT_SOURCE_DIR}/src/miniglog)
-# ###libminiglog.dylib for Mac and libminiglog.so for Linux in below line.
-# set(MINIGLOG_LIBS ${MINIGLOG_PATH}/build/lib/libminiglog.so) 
-# set(MINIGLOG_INCLUDE_DIRS ${MINIGLOG_PATH}/build/include)
-set(DRIVER_LIBS driver_lib)
+#要调试一下ros 和sdk版本的${PROJECT_SOURCE_DIR}是否相同.
+set(MINIGLOG_PATH ${PROJECT_SOURCE_DIR}/src/miniglog)
+###libminiglog.dylib for Mac and libminiglog.so for Linux in below line.
+set(MINIGLOG_LIBS ${MINIGLOG_PATH}/build/lib/libminiglog.so) 
+set(MINIGLOG_INCLUDE_DIRS ${MINIGLOG_PATH}/build/include)
+
+
+if (ENABLE_MYNT_SDK)
+  set(CAMERA_MODELS_PATH ${PROJECT_SOURCE_DIR}/../camera_models)
+  set(CAMERA_MODELS_LIBS ${CAMERA_MODELS_PATH}/build/libcamera_models.a) 
+  set(CAMERA_MODELS_INCLUDE_DIRS ${CAMERA_MODELS_PATH}/include)
+endif()
+
+# set(DRIVER_LIBS driver_lib)
 ####################################################
 
 ############## find relevant packages ##############
@@ -47,11 +57,22 @@ message(AUTHOR_WARNING "OpenCV_VERSION: ${OpenCV_VERSION}")
 
 ############## include_directories #################
 include_directories(${CERES_INCLUDE_DIRS} ${EIGEN3_INCLUDE_DIR})
+include_directories(${MINIGLOG_INCLUDE_DIRS})
+include_directories(${PROJECT_BINARY_DIR})#used to find config.h
 ####################################################
+set(DRIVER_SOURCES 
+    src/driver/adapter.cpp
+    src/driver/driver.cpp
+    src/driver/cv_painter.cpp
+    src/driver/simulator.cpp)
 
 ################# set by switch ####################
 if (ENABLE_MYNT_SDK)
   set(DRIVER_LIBS ${DRIVER_LIBS} mynteye)
+
+  set(DRIVER_SOURCES ${DRIVER_SOURCES} 
+    src/driver/mynt_S1030.cpp
+    src/utility/visual_sdk.cpp)
 elseif(ENABLE_MYNT_ROS)
   catkin_package()
   find_package(catkin REQUIRED COMPONENTS
@@ -65,11 +86,18 @@ elseif(ENABLE_MYNT_ROS)
       image_transport)
   include_directories(${catkin_INCLUDE_DIRS})
   set(DRIVER_LIBS ${DRIVER_LIBS} ${catkin_LIBRARIES})
+
+  set(DRIVER_SOURCES ${DRIVER_SOURCES} 
+  src/driver/mynt_S1030_ros.cpp
+  src/utility/visual_ros.cpp
+  src/utility/visualization.cpp
+  src/utility/CameraPoseVisualization.cpp)
+
 endif()
 ####################################################
 
 ################ Add subdirectory ##################
-add_subdirectory( ${PROJECT_SOURCE_DIR}/src/driver)
+# add_subdirectory( ${PROJECT_SOURCE_DIR}/src/driver)
 ####################################################
 
 ############### Generate lib and exe ###############
@@ -83,14 +111,13 @@ add_library(vins_lib
     src/factor/projectionOneFrameTwoCamFactor.cpp
     src/factor/marginalization_factor.cpp
     src/utility/utility.cpp
-    src/utility/visualization.cpp
-    src/utility/CameraPoseVisualization.cpp
+    ${DRIVER_SOURCES}
     src/initial/solve_5pts.cpp
     src/initial/initial_aligment.cpp
     src/initial/initial_sfm.cpp
     src/initial/initial_ex_rotation.cpp
     src/featureTracker/feature_tracker.cpp)
-target_link_libraries(vins_lib  ${OpenCV_LIBS} ${CERES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+target_link_libraries(vins_lib  ${MINIGLOG_LIBS} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 add_executable(vins_node src/main.cpp)
 target_link_libraries(vins_node vins_lib ${DRIVER_LIBS}) 

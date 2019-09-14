@@ -70,7 +70,7 @@ void CSimulator::GenerateNoiseOnGyroAccel()
     gyro_noise = GenerateGaussianWhiteNoise(NOISE_BUF_LEN, noise_model_array[idx].gyro_noise_mean, noise_model_array[idx].gyro_noise_stddev);
 
     cout << "Add gyro_noise, mean:" << noise_model_array[idx].gyro_noise_mean << "  stddev:" << noise_model_array[idx].gyro_noise_stddev << endl;
-    for(int i = 0; i < MIN(100,NOISE_BUF_LEN); i++)
+    for(unsigned int i = 0; i < MIN(100,NOISE_BUF_LEN); i++)
     {
         cout << gyro_noise[i] << endl;
     }
@@ -80,7 +80,7 @@ void CSimulator::GenerateNoiseOnGyroAccel()
     accel_noise = GenerateGaussianWhiteNoise(NOISE_BUF_LEN, noise_model_array[idx].accel_noise_mean, noise_model_array[idx].accel_noise_stddev);
 
     cout << "Add accel_noise, mean:" << noise_model_array[idx].accel_noise_mean << "  stddev:" << noise_model_array[idx].accel_noise_stddev << endl;
-    for(int i = 0; i < MIN(100,NOISE_BUF_LEN); i++)
+    for(unsigned int i = 0; i < MIN(100,NOISE_BUF_LEN); i++)
     {
         cout << accel_noise[i] << endl;
     }

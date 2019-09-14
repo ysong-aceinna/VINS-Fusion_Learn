@@ -8,17 +8,31 @@
  *******************************************************/
 
 #include "estimator.h"
-#include "../utility/visualization.h"
 
 Estimator::Estimator(): f_manager{Rs}
 {
+    LOG(INFO) <<"Estimator::Estimator()"; //@@@@@
+
+#ifdef ENABLE_MYNT_SDK
+    m_pvisual = new CVisualSDK();
+#elif defined (ENABLE_MYNT_ROS)
+    m_pvisual = new CVisualROS();
+#else  
+#endif
+
     LOG(INFO) <<"init begins";
+    m_pvisual->Init();
+    for (int i = 0; i < WINDOW_SIZE + 1; i++)
+        pre_integrations[i] = nullptr;        
+
     initThreadFlag = false;
     clearState();
+
+    //record accel and gyro bias evaluated by VINS.
     m_fout_imu_bias = ofstream("/home/song/catkin_ws/imu_bias.csv", ios::app);
     if (!m_fout_imu_bias)
     {
-        cout << "open file failed! Exit ..." << endl;
+        LOG(ERROR) << "open file failed! Exit ...";
         exit(EXIT_FAILURE);
     }
 }
@@ -66,8 +80,8 @@ void Estimator::clearState()
         if (pre_integrations[i] != nullptr)
         {
             delete pre_integrations[i];
-        }
-        pre_integrations[i] = nullptr;
+            pre_integrations[i] = nullptr;        
+        }    
     }
 
     for (int i = 0; i < NUM_OF_CAM; i++)
@@ -94,9 +108,7 @@ void Estimator::clearState()
     last_marginalization_parameter_blocks.clear();
 
     f_manager.clearState();
-
     failure_occur = 0;
-
     mProcess.unlock();
 }
 
@@ -188,7 +200,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
     if (SHOW_TRACK)
     {
         cv::Mat imgTrack = featureTracker.getTrackImage();
-        pubTrackImage(imgTrack, t);
+        m_pvisual->ShowTrackImage(imgTrack, t);
     }
     
     if(MULTIPLE_THREAD)  
@@ -224,7 +236,9 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
     //SONG:IMU的预计分。需要看论文了解预计分的原理。
     fastPredictIMU(t, linearAcceleration, angularVelocity);
     if (solver_flag == NON_LINEAR)
-        pubLatestOdometry(latest_P, latest_Q, latest_V, t); //SONG: Pub topic "imu_propagate".
+    {
+        m_pvisual->ShowLatestOdometry(latest_P, latest_Q, latest_V, t);
+    }
 }
 
 void Estimator::inputFeature(double t, const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &featureFrame)
@@ -349,19 +363,7 @@ void Estimator::processMeasurements()
             mProcess.lock();
             processImage(feature.second, feature.first);//SONG:feature.first是时间(秒)，
             prevTime = curTime;
-
-            printStatistics(*this, 0);
-
-            std_msgs::Header header;
-            header.frame_id = "world";
-            header.stamp = ros::Time(feature.first);
-
-            pubOdometry(*this, header);
-            pubKeyPoses(*this, header);
-            pubCameraPose(*this, header);
-            pubPointCloud(*this, header);
-            pubKeyframe(*this);
-            pubTF(*this, header);
+            m_pvisual->ShowResults(*this, feature.first);
             mProcess.unlock();
         }
 
@@ -445,8 +447,8 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
 
 void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &image, const double header)
 {
-    ROS_DEBUG("new image coming ------------------------------------------");
-    ROS_DEBUG("Adding feature points %lu", image.size());
+    DLOG(INFO) << "new image coming ------------------------------------------";
+    DLOG(INFO) << "Adding feature points " << image.size();
     if (f_manager.addFeatureCheckParallax(frame_count, image, td))
     {
         marginalization_flag = MARGIN_OLD;
@@ -458,9 +460,9 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         //printf("non-keyframe\n");
     }
 
-    ROS_DEBUG("%s", marginalization_flag ? "Non-keyframe" : "Keyframe");
-    ROS_DEBUG("Solving %d", frame_count);
-    ROS_DEBUG("number of feature: %d", f_manager.getFeatureCount());
+    DLOG(INFO) << (marginalization_flag ? "Non-keyframe" : "Keyframe") ;
+    DLOG(INFO) << "Solving " << frame_count;
+    DLOG(INFO) << "number of feature: " << f_manager.getFeatureCount();
     Headers[frame_count] = header;
 
     ImageFrame imageframe(image, header);
@@ -470,15 +472,15 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 
     if(ESTIMATE_EXTRINSIC == 2)
     {
-        ROS_INFO("calibrating extrinsic param, rotation movement is needed");
+        LOG(INFO) << "calibrating extrinsic param, rotation movement is needed";
         if (frame_count != 0)
         {
             vector<pair<Vector3d, Vector3d>> corres = f_manager.getCorresponding(frame_count - 1, frame_count);
             Matrix3d calib_ric;
             if (initial_ex_rotation.CalibrationExRotation(corres, pre_integrations[frame_count]->delta_q, calib_ric))
             {
-                ROS_WARN("initial extrinsic rotation calib success");
-                ROS_WARN_STREAM("initial extrinsic rotation: " << endl << calib_ric);
+                LOG(WARNING) << "initial extrinsic rotation calib success";
+                LOG(WARNING) << "initial extrinsic rotation: " << endl << calib_ric;
                 ric[0] = calib_ric;
                 RIC[0] = calib_ric;
                 ESTIMATE_EXTRINSIC = 1;
@@ -507,7 +509,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
                     solver_flag = NON_LINEAR;
                     optimization();
                     slideWindow();
-                    ROS_INFO("Initialization finish!");
+                    LOG(INFO) << "Initialization finish!";
                 }
                 else
                     slideWindow();
@@ -537,7 +539,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
                 solver_flag = NON_LINEAR;
                 optimization();
                 slideWindow();
-                ROS_INFO("Initialization finish!");
+                LOG(INFO) << "Initialization finish!";
             }
         }
 
@@ -552,7 +554,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             {
                 solver_flag = NON_LINEAR;
                 slideWindow();
-                ROS_INFO("Initialization finish!");
+                LOG(INFO) << "Initialization finish!";
             }
         }
 
@@ -585,16 +587,16 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             predictPtsInNextFrame();
         }
             
-        ROS_DEBUG("solver costs: %fms", t_solve.toc());
+        DLOG(INFO) << "solver costs: " << t_solve.toc() << "ms";
 
 //SONG: 失效自检测，自动重启算法。实际上由于failureDetection强制return false，所以下边的if永远没有执行。
         if (failureDetection())
         {
-            ROS_WARN("failure detection!");
+            LOG(WARNING) << "failure detection";
             failure_occur = 1;
             clearState();
             setParameter();
-            ROS_WARN("system reboot!");
+            LOG(WARNING) << "system reboot!";
             return;
         }
 
@@ -637,10 +639,10 @@ bool Estimator::initialStructure()
             //cout << "frame g " << tmp_g.transpose() << endl;
         }
         var = sqrt(var / ((int)all_image_frame.size() - 1));
-        //ROS_WARN("IMU variation %f!", var);
+        // LOG(WARNING) << "IMU variation " << var << "!";
         if(var < 0.25)
         {
-            ROS_INFO("IMU excitation not enouth!");
+            LOG(INFO) << "IMU excitation not enouth!";
             //return false;
         }
     }
@@ -668,7 +670,7 @@ bool Estimator::initialStructure()
     int l;
     if (!relativePose(relative_R, relative_T, l))
     {
-        ROS_INFO("Not enough features or parallax; Move device around");
+        LOG(INFO) << "Not enough features or parallax; Move device around";
         return false;
     }
     GlobalSFM sfm;
@@ -676,7 +678,7 @@ bool Estimator::initialStructure()
               relative_R, relative_T,
               sfm_f, sfm_tracked_points))
     {
-        ROS_DEBUG("global SFM failed!");
+        DLOG(INFO) << "global SFM failed!";
         marginalization_flag = MARGIN_OLD;
         return false;
     }
@@ -731,12 +733,12 @@ bool Estimator::initialStructure()
         if(pts_3_vector.size() < 6)
         {
             cout << "pts_3_vector size " << pts_3_vector.size() << endl;
-            ROS_DEBUG("Not enough points for solve pnp !");
+            DLOG(INFO) << "ot enough points for solve pnp!";
             return false;
         }
         if (! cv::solvePnP(pts_3_vector, pts_2_vector, K, D, rvec, t, 1))
         {
-            ROS_DEBUG("solve pnp fail!");
+            DLOG(INFO) << "solve pnp fail!";
             return false;
         }
         cv::Rodrigues(rvec, r);
@@ -753,7 +755,7 @@ bool Estimator::initialStructure()
         return true;
     else
     {
-        ROS_INFO("misalign visual structure with IMU");
+        LOG(INFO) << "misalign visual structure with IMU";
         return false;
     }
 
@@ -767,7 +769,7 @@ bool Estimator::visualInitialAlign()
     bool result = VisualIMUAlignment(all_image_frame, Bgs, g, x);
     if(!result)
     {
-        ROS_DEBUG("solve g failed!");
+        DLOG(INFO) << "solve g failed!";
         return false;
     }
 
@@ -811,8 +813,8 @@ bool Estimator::visualInitialAlign()
         Rs[i] = rot_diff * Rs[i];
         Vs[i] = rot_diff * Vs[i];
     }
-    ROS_DEBUG_STREAM("g0     " << g.transpose());
-    ROS_DEBUG_STREAM("my R0  " << Utility::R2ypr(Rs[0]).transpose()); 
+    DLOG(INFO) << "g0     " << g.transpose();
+    DLOG(INFO) << "my R0  " << Utility::R2ypr(Rs[0]).transpose(); 
 
     f_manager.clearDepth();
     f_manager.triangulate(frame_count, Ps, Rs, tic, ric);
@@ -843,7 +845,9 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
             if(average_parallax * 460 > 30 && m_estimator.solveRelativeRT(corres, relative_R, relative_T))
             {
                 l = i;
-                ROS_DEBUG("average_parallax %f choose l %d and newest frame to triangulate the whole structure", average_parallax * 460, l);
+                DLOG(INFO) << "average_parallax " << average_parallax * 460
+                << " choose l " << l
+                << " and newest frame to triangulate the whole structure";
                 return true;
             }
         }
@@ -892,7 +896,6 @@ void Estimator::vector2double()
         para_Ex_Pose[i][6] = q.w();
     }
 
-
     VectorXd dep = f_manager.getDepthVector();
     for (int i = 0; i < f_manager.getFeatureCount(); i++)
         para_Feature[i][0] = dep(i);
@@ -923,7 +926,7 @@ void Estimator::double2vector()
         Matrix3d rot_diff = Utility::ypr2R(Vector3d(y_diff, 0, 0));
         if (abs(abs(origin_R0.y()) - 90) < 1.0 || abs(abs(origin_R00.y()) - 90) < 1.0)
         {
-            ROS_DEBUG("euler singular point!");
+            DLOG(INFO) << "euler singular point!";
             rot_diff = Rs[0] * Quaterniond(para_Pose[0][6],
                                            para_Pose[0][3],
                                            para_Pose[0][4],
@@ -993,35 +996,35 @@ bool Estimator::failureDetection()
     return false;
     if (f_manager.last_track_num < 2)
     {
-        ROS_INFO(" little feature %d", f_manager.last_track_num);
+        LOG(INFO) << "little feature " << f_manager.last_track_num;
         //return true;
     }
     if (Bas[WINDOW_SIZE].norm() > 2.5)
     {
-        ROS_INFO(" big IMU acc bias estimation %f", Bas[WINDOW_SIZE].norm());
+        LOG(INFO) << "big IMU acc bias estimation " << Bas[WINDOW_SIZE].norm();
         return true;
     }
     if (Bgs[WINDOW_SIZE].norm() > 1.0)
     {
-        ROS_INFO(" big IMU gyr bias estimation %f", Bgs[WINDOW_SIZE].norm());
+        LOG(INFO) << "big IMU gyr bias estimation " << Bgs[WINDOW_SIZE].norm();
         return true;
     }
     /*
     if (tic(0) > 1)
     {
-        ROS_INFO(" big extri param estimation %d", tic(0) > 1);
+        LOG(INFO) << "big extri param estimation " << tic(0) > 1;
         return true;
     }
     */
     Vector3d tmp_P = Ps[WINDOW_SIZE];
     if ((tmp_P - last_P).norm() > 5)
     {
-        //ROS_INFO(" big translation");
+        // LOG(INFO) << "big translation";
         //return true;
     }
     if (abs(tmp_P.z() - last_P.z()) > 1)
     {
-        //ROS_INFO(" big z translation");
+        // LOG(INFO) << "big z translation";
         //return true; 
     }
     Matrix3d tmp_R = Rs[WINDOW_SIZE];
@@ -1031,7 +1034,7 @@ bool Estimator::failureDetection()
     delta_angle = acos(delta_Q.w()) * 2.0 / 3.14 * 180.0;
     if (delta_angle > 50)
     {
-        ROS_INFO(" big delta_angle ");
+        LOG(INFO) << "big delta_angle";
         //return true;
     }
     return false;
@@ -1068,12 +1071,12 @@ void Estimator::optimization()
         problem.AddParameterBlock(para_Ex_Pose[i], SIZE_POSE, local_parameterization);
         if ((ESTIMATE_EXTRINSIC && frame_count == WINDOW_SIZE && Vs[0].norm() > 0.2) || openExEstimation)
         {
-            //ROS_INFO("estimate extinsic param");
+            // LOG(INFO) << "estimate extinsic param";
             openExEstimation = 1;
         }
         else
         {
-            //ROS_INFO("fix extinsic param");
+            //LOG(INFO) << "fix extinsic param";
             problem.SetParameterBlockConstant(para_Ex_Pose[i]);
         }
     }
@@ -1146,8 +1149,8 @@ void Estimator::optimization()
             f_m_cnt++;
         }
     }
-
-    ROS_DEBUG("visual measurement count: %d", f_m_cnt);
+    
+    DLOG(INFO) << "visual measurement count: " << f_m_cnt;
     //printf("prepare for ceres: %f \n", t_prepare.toc());
 
     ceres::Solver::Options options;
@@ -1167,7 +1170,7 @@ void Estimator::optimization()
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
     //cout << summary.BriefReport() << endl;
-    ROS_DEBUG("Iterations : %d", static_cast<int>(summary.iterations.size()));
+    DLOG(INFO) << "Iterations : " << static_cast<int>(summary.iterations.size());
     //printf("solver costs: %f \n", t_solver.toc());
 
     // cout << "Bas3:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
@@ -1272,11 +1275,11 @@ void Estimator::optimization()
 
         TicToc t_pre_margin;
         marginalization_info->preMarginalize();
-        ROS_DEBUG("pre marginalization %f ms", t_pre_margin.toc());
-        
+        DLOG(INFO) << "pre marginalization " << t_pre_margin.toc() << "ms";
+
         TicToc t_margin;
         marginalization_info->marginalize();
-        ROS_DEBUG("marginalization %f ms", t_margin.toc());
+        DLOG(INFO) << "marginalization " << t_margin.toc() << " ms";
 
         std::unordered_map<long, double *> addr_shift;
         for (int i = 1; i <= WINDOW_SIZE; i++)
@@ -1311,7 +1314,9 @@ void Estimator::optimization()
                 vector<int> drop_set;
                 for (int i = 0; i < static_cast<int>(last_marginalization_parameter_blocks.size()); i++)
                 {
-                    ROS_ASSERT(last_marginalization_parameter_blocks[i] != para_SpeedBias[WINDOW_SIZE - 1]);
+                    LOG_IF(ERROR, !(last_marginalization_parameter_blocks[i] != para_SpeedBias[WINDOW_SIZE - 1])) 
+                    << "last_marginalization_parameter_blocks[i] != para_SpeedBias[WINDOW_SIZE - 1]";
+
                     if (last_marginalization_parameter_blocks[i] == para_Pose[WINDOW_SIZE - 1])
                         drop_set.push_back(i);
                 }
@@ -1325,14 +1330,14 @@ void Estimator::optimization()
             }
 
             TicToc t_pre_margin;
-            ROS_DEBUG("begin marginalization");
+            DLOG(INFO) << "begin marginalization";
             marginalization_info->preMarginalize();
-            ROS_DEBUG("end pre marginalization, %f ms", t_pre_margin.toc());
+            DLOG(INFO) << "end pre marginalization, " << t_pre_margin.toc() << " ms";
 
             TicToc t_margin;
-            ROS_DEBUG("begin marginalization");
+            DLOG(INFO) << "begin marginalization";
             marginalization_info->marginalize();
-            ROS_DEBUG("end marginalization, %f ms", t_margin.toc());
+            DLOG(INFO) << "end marginalization, " << t_margin.toc() << " ms";
             
             std::unordered_map<long, double *> addr_shift;
             for (int i = 0; i <= WINDOW_SIZE; i++)

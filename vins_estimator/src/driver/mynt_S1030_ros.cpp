@@ -35,9 +35,9 @@ void CMyntS1030ROSDriver::Start()
   LOG(INFO) << "CMyntS1030ROSDriver::Start()";
 
   ros::NodeHandle n("~");
-  ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info); //Info  Debug
-  ROS_WARN("waiting for image and imu...");
-  registerPub(n);
+  ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info); //Info  Debug   Warn, Error,Fatal,
+  
+  LOG(WARNING) << "waiting for image and imu...";
   ros::Subscriber sub_imu = n.subscribe(m_imu_topic, 2000, &CMyntS1030ROSDriver::imu_callback, this, ros::TransportHints().tcpNoDelay());
   ros::Subscriber sub_feature = n.subscribe("/feature_tracker/feature", 2000, &CMyntS1030ROSDriver::feature_callback, this);
   ros::Subscriber sub_img0 = n.subscribe(m_image0_topic, 100, &CMyntS1030ROSDriver::img0_callback, this);
@@ -45,6 +45,7 @@ void CMyntS1030ROSDriver::Start()
   ros::Subscriber sub_restart = n.subscribe("/vins_restart", 100, &CMyntS1030ROSDriver::restart_callback, this);
   ros::Subscriber sub_imu_switch = n.subscribe("/vins_imu_switch", 100, &CMyntS1030ROSDriver::imu_switch_callback, this);
   ros::Subscriber sub_cam_switch = n.subscribe("/vins_cam_switch", 100, &CMyntS1030ROSDriver::cam_switch_callback, this);
+
   ros::spin();
 }
 
@@ -81,12 +82,23 @@ SImgData CMyntS1030ROSDriver::ImageDataConvert(const sensor_msgs::ImageConstPtr 
       LOG(INFO) << "img_msg->encoding: 8UC1";
   }
   else
+  {
       ptr = cv_bridge::toCvCopy(img_msg, sensor_msgs::image_encodings::MONO8);
-
+  }
   SImgData dst;
   dst.frame = ptr->image.clone();
   dst.frame_id = img_msg->header.seq;
   dst.timestamp = img_msg->header.stamp.toSec();
+  /*
+  debug info (EuRoC datasets):
+    img_msg->encoding: mono8 ,dst.frame.channels: 1 ,dst.frame.depth: 0 ,dst.frame.dims: 2 ,dst.frame.size: 752 x 480
+  */
+  // ROS_INFO_STREAM("img_msg->encoding: " << img_msg->encoding 
+  // << " ,dst.frame.channels: " << dst.frame.channels()
+  // << " ,dst.frame.depth: " << dst.frame.depth()
+  // << " ,dst.frame.dims: " << dst.frame.dims 
+  // << " ,dst.frame.size: " << dst.frame.cols << " x " << dst.frame.rows );
+
   return dst;
 }
 
@@ -101,6 +113,16 @@ SImuData CMyntS1030ROSDriver::IMUDataConvert(const sensor_msgs::ImuConstPtr &imu
   dst.gyro[0] = imu_msg->angular_velocity.x;
   dst.gyro[1] = imu_msg->angular_velocity.y;
   dst.gyro[2] = imu_msg->angular_velocity.z;
+
+  /*
+  Debug info (EuRoC):
+  frame_id: 9523 ,timestamp: 1403636858.996666 ,accel: 9.504278 , -0.473988 , -3.031889 ,gyro: -0.129852 , -0.012566 , 0.034907
+  */
+
+  // ROS_INFO_STREAM("frame_id: " << dst.frame_id 
+  // << " ,timestamp: " << setiosflags(ios::fixed) << dst.timestamp
+  // << " ,accel: " << dst.accel[0] << " , " << dst.accel[1] << " , " << dst.accel[2]
+  // << " ,gyro: " << dst.gyro[0] << " , " << dst.gyro[1] << " , " << dst.gyro[2] );
 
 
 
@@ -136,18 +158,17 @@ SImuData CMyntS1030ROSDriver::IMUDataConvert(const sensor_msgs::ImuConstPtr &imu
 //   return new_image;
 // }
 
-
 void CMyntS1030ROSDriver::img0_callback(const sensor_msgs::ImageConstPtr &img_msg)
 {
   SImgData img_data = ImageDataConvert(img_msg);
   m_padapter->UpdateLeftImage(img_data);
-  LOG(INFO) << "image id: " << img_data.frame_id<< " ,time: " << setiosflags(ios::fixed) << img_data.timestamp << " sec"<<endl;
+  // LOG(INFO) << "image id: " << img_data.frame_id<< " ,time: " << setiosflags(ios::fixed) << img_data.timestamp << " sec"<<endl;
 }
 
 void CMyntS1030ROSDriver::img1_callback(const sensor_msgs::ImageConstPtr &img_msg)
 {
   SImgData img_data = ImageDataConvert(img_msg);
-  m_padapter->UpdateLeftImage(img_data);
+  m_padapter->UpdateRightImage(img_data);
 }
 
 //SONG: NOTE! Accelerations should be in m/s^2 (not in g's), 

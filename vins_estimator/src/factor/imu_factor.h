@@ -8,7 +8,6 @@
  *******************************************************/
 
 #pragma once
-#include <ros/assert.h>
 #include <iostream>
 #include <eigen3/Eigen/Dense>
 
@@ -87,9 +86,8 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
 
             if (pre_integration->jacobian.maxCoeff() > 1e8 || pre_integration->jacobian.minCoeff() < -1e8)
             {
-                ROS_WARN("numerical unstable in preintegration");
+                LOG(WARNING) << "numerical unstable in preintegration";
                 //std::cout << pre_integration->jacobian << std::endl;
-///                ROS_BREAK();
             }
 
             if (jacobians[0])
@@ -113,9 +111,8 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
 
                 if (jacobian_pose_i.maxCoeff() > 1e8 || jacobian_pose_i.minCoeff() < -1e8)
                 {
-                    ROS_WARN("numerical unstable in preintegration");
+                    LOG(WARNING) << "numerical unstable in preintegration";
                     //std::cout << sqrt_info << std::endl;
-                    //ROS_BREAK();
                 }
             }
             if (jacobians[1])
@@ -144,8 +141,8 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
 
                 jacobian_speedbias_i = sqrt_info * jacobian_speedbias_i;
 
-                //ROS_ASSERT(fabs(jacobian_speedbias_i.maxCoeff()) < 1e8);
-                //ROS_ASSERT(fabs(jacobian_speedbias_i.minCoeff()) < 1e8);
+                // LOG_IF(ERROR, !(fabs(jacobian_speedbias_i.maxCoeff()) < 1e8)) << "fabs(jacobian_speedbias_i.maxCoeff()) < 1e8";
+                // LOG_IF(ERROR, !(fabs(jacobian_speedbias_i.minCoeff()) < 1e8)) << "fabs(jacobian_speedbias_i.minCoeff()) < 1e8";
             }
             if (jacobians[2])
             {
@@ -163,8 +160,8 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
 
                 jacobian_pose_j = sqrt_info * jacobian_pose_j;
 
-                //ROS_ASSERT(fabs(jacobian_pose_j.maxCoeff()) < 1e8);
-                //ROS_ASSERT(fabs(jacobian_pose_j.minCoeff()) < 1e8);
+                // LOG_IF(ERROR, !(fabs(jacobian_pose_j.maxCoeff()) < 1e8)) << "fabs(jacobian_pose_j.maxCoeff()) < 1e8";
+                // LOG_IF(ERROR, !(fabs(jacobian_pose_j.minCoeff()) < 1e8)) << "fabs(jacobian_pose_j.minCoeff()) < 1e8";
             }
             if (jacobians[3])
             {
@@ -179,8 +176,8 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9>
 
                 jacobian_speedbias_j = sqrt_info * jacobian_speedbias_j;
 
-                //ROS_ASSERT(fabs(jacobian_speedbias_j.maxCoeff()) < 1e8);
-                //ROS_ASSERT(fabs(jacobian_speedbias_j.minCoeff()) < 1e8);
+                // LOG_IF(ERROR, !(fabs(jacobian_speedbias_j.maxCoeff()) < 1e8)) << "fabs(jacobian_speedbias_j.maxCoeff()) < 1e8";
+                // LOG_IF(ERROR, !(fabs(jacobian_speedbias_j.minCoeff()) < 1e8)) << "fabs(jacobian_speedbias_j.minCoeff()) < 1e8";
             }
         }
 

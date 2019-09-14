@@ -9,7 +9,6 @@
 
 #pragma once
 
-#include <ros/ros.h>
 #include <vector>
 #include <eigen3/Eigen/Dense>
 #include "../utility/utility.h"
@@ -17,6 +16,7 @@
 #include <opencv2/core/eigen.hpp>
 #include <fstream>
 #include <map>
+#include "../driver/mglog.h"
 
 using namespace std;
 

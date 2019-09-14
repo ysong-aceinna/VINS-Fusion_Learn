@@ -50,29 +50,12 @@ int FLOW_BACK;
 int B_ADD_EXTRA_NOISE;
 int EXTRA_NOISE_IDX;
 
-
-template <typename T>
-T readParam(ros::NodeHandle &n, std::string name)
-{
-    T ans;
-    if (n.getParam(name, ans))
-    {
-        ROS_INFO_STREAM("Loaded " << name << ": " << ans);
-    }
-    else
-    {
-        ROS_ERROR_STREAM("Failed to load " << name);
-        n.shutdown();
-    }
-    return ans;
-}
 //SONG:从配置文件读取配置参数，并赋给全局变量
 void readParameters(std::string config_file)
 {
     FILE *fh = fopen(config_file.c_str(),"r");
     if(fh == NULL){
-        ROS_WARN("config_file dosen't exist; wrong config_file path");
-        ROS_BREAK();
+        LOG(ERROR) << "config_file dosen't exist; wrong config_file path";
         return;          
     }
     fclose(fh);
@@ -128,7 +111,7 @@ void readParameters(std::string config_file)
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)
     {
-        ROS_WARN("have no prior about extrinsic param, calibrate extrinsic param");
+        LOG(WARNING) << "have no prior about extrinsic param, calibrate extrinsic param";
         RIC.push_back(Eigen::Matrix3d::Identity());
         TIC.push_back(Eigen::Vector3d::Zero());
         EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
@@ -137,11 +120,11 @@ void readParameters(std::string config_file)
     {
         if ( ESTIMATE_EXTRINSIC == 1)
         {
-            ROS_WARN(" Optimize extrinsic param around initial guess!");
+            cout << " Optimize extrinsic param around initial guess!" << endl;
             EX_CALIB_RESULT_PATH = OUTPUT_FOLDER + "/extrinsic_parameter.csv";
         }
         if (ESTIMATE_EXTRINSIC == 0)
-            ROS_WARN(" fix extrinsic param ");
+            cout << " fix extrinsic param " << endl;
 
         cv::Mat cv_T;
         fsSettings["body_T_cam0"] >> cv_T;
@@ -205,13 +188,13 @@ void readParameters(std::string config_file)
     TD = fsSettings["td"];
     ESTIMATE_TD = fsSettings["estimate_td"];
     if (ESTIMATE_TD)
-        ROS_INFO_STREAM("Unsynchronized sensors, online estimate time offset, initial td: " << TD);
+        cout << "Unsynchronized sensors, online estimate time offset, initial td: " << TD << endl;
     else
-        ROS_INFO_STREAM("Synchronized sensors, fix time offset: " << TD);
+        cout << "Synchronized sensors, fix time offset: " << TD << endl;
 
     ROW = fsSettings["image_height"];
     COL = fsSettings["image_width"];
-    ROS_INFO("ROW: %d COL: %d ", ROW, COL);
+    cout << "ROW: " << ROW << " ,COL: " << COL << endl;
 
     if(!USE_IMU)
     {

@@ -10,8 +10,7 @@
 #pragma once
 #include <thread>
 #include <mutex>
-#include <std_msgs/Header.h>
-#include <std_msgs/Float32.h>
+#include "parameters.h"
 #include <ceres/ceres.h>
 #include <unordered_map>
 #include <queue>
@@ -19,7 +18,6 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Geometry>
 
-#include "parameters.h"
 #include "feature_manager.h"
 #include "../utility/utility.h"
 #include "../utility/tic_toc.h"
@@ -34,7 +32,16 @@
 #include "../factor/projectionTwoFrameTwoCamFactor.h"
 #include "../factor/projectionOneFrameTwoCamFactor.h"
 #include "../featureTracker/feature_tracker.h"
+#include <config.h>
 
+#ifdef ENABLE_MYNT_SDK
+#include "../utility/visual_sdk.h"
+#elif defined (ENABLE_MYNT_ROS)
+#include "../utility/visual_ros.h"
+#else  
+#endif
+
+class CVisualBase;
 
 class Estimator
 {
@@ -175,4 +182,7 @@ class Estimator
 
     bool initFirstPoseFlag;
     bool initThreadFlag;
+
+private:
+    CVisualBase*  m_pvisual;
 };

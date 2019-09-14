@@ -11,7 +11,7 @@
 
 #include <stdio.h>
 #include <config.h>
-#include "estimator/estimator.h"
+#include "estimator/parameters.h"
 
 #ifdef ENABLE_MYNT_SDK
 #include "driver/mynt_S1030.h"
@@ -20,27 +20,18 @@
 #else  
 #endif
 
-// #include <queue>
-// #include <map>
-// #include <thread>
-// #include <mutex>
-// #include <ros/ros.h>
-// #include <cv_bridge/cv_bridge.h>
-// #include <opencv2/opencv.hpp>
-// #include "estimator/estimator.h"
-// #include "estimator/parameters.h"
-
-
 int main(int argc, char **argv)
 {
 #ifdef ENABLE_MYNT_SDK
+    LOG(WARNING) << "ENABLE_MYNT_SDK";
     CDriverBase* pdriver = new CMyntS1030Driver();
 #elif defined (ENABLE_MYNT_ROS)
+    LOG(WARNING) << "ENABLE_MYNT_ROS";
     CDriverBase* pdriver = new CMyntS1030ROSDriver();
 #else  
 #endif
 
-    if(argc != 2)
+    if(argc < 2)
     {
         cout << "please intput: rosrun vins vins_node [config file] \n"
                "for example: rosrun vins vins_node "
@@ -48,16 +39,22 @@ int main(int argc, char **argv)
                << endl;
         return 1;
     }
-
     string config_file = argv[1];
-    cout << "config_file: " << argv[1] << endl;
-    readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量
+    LOG(INFO) << "config_file: " << argv[1];
+    readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量 !!!!! 改为单态
+
+    pdriver->ReadParameters(config_file);
+    pdriver->Init(argc, argv);
 
     CAdapter* padapter = new CAdapter();
-    pdriver->ReadParameters(config_file);
     pdriver->AddListener(padapter);
-    pdriver->Init(argc, argv);
     pdriver->Start();
+
+#ifdef ENABLE_MYNT_SDK
+    while (1);
+#elif defined (ENABLE_MYNT_ROS)
+#else  
+#endif
     pdriver->Stop();
 
 /*   test restart driver.

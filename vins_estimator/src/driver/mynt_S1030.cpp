@@ -88,20 +88,20 @@ void CMyntS1030Driver::ThreadGetData()
     if (!left_data.frame.empty()) 
     {
       img_data = ImageDataConvert(left_data);
-      m_adapter->UpdateLeftImage(img_data);
+      m_padapter->UpdateLeftImage(img_data);
     }
 
     if (!m_bmono && !right_data.frame.empty()) 
     {
       img_data = ImageDataConvert(right_data);
-      m_adapter->UpdateRightImage(img_data);
+      m_padapter->UpdateRightImage(img_data);
     }
 
     SImuData imu_data;
     for (auto &&data : motion_datas)
     {
       imu_data = IMUDataConvert(data);
-      m_adapter->UpdateIMU(imu_data);
+      m_padapter->UpdateIMU(imu_data);
 
       if(imu_data.flag != 0)
       {
