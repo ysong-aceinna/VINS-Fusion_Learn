@@ -2,18 +2,19 @@ cmake_minimum_required(VERSION 2.8.3)
 project(vins)
 
 ############### Choose driver type #################
-option (ENABLE_MYNT_SDK "Enable MYNT SDK." OFF)
-option (ENABLE_MYNT_ROS "Enable MYNT ROS driver." ON)
+option (ENABLE_MYNT_SDK "Enable MYNT SDK." ON)
+option (ENABLE_MYNT_ROS "Enable MYNT ROS driver." OFF)
 ####################################################
 
 ############## Set Release or Debug ################
 set(COMPILE_TYPE Release)
 if(COMPILE_TYPE STREQUAL "Release")
   set(CMAKE_BUILD_TYPE "Release")
-  set(CMAKE_CXX_FLAGS "-std=c++11")
+  set(CMAKE_CXX_FLAGS "-std=c++11") # -march=native
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
 elseif(COMPILE_TYPE STREQUAL "Debug")
   SET(CMAKE_BUILD_TYPE "Debug")
+  set(CMAKE_CXX_FLAGS "-std=c++11") # -march=native
   SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 else()
   message(FATAL_ERROR "COMPILE_TYPE is Error!")
@@ -71,6 +72,8 @@ if (ENABLE_MYNT_SDK)
     src/driver/mynt_S1030.cpp
     src/utility/visual_sdk.cpp)
 
+    set(BUILD_SHARED SHARED)
+
 elseif(ENABLE_MYNT_ROS)
   catkin_package()
   find_package(catkin REQUIRED COMPONENTS
@@ -95,6 +98,7 @@ endif()
 
 ############### Generate lib and exe ###############
 add_library(vins_lib
+    ${BUILD_SHARED}
     src/estimator/parameters.cpp
     src/estimator/estimator.cpp
     src/estimator/feature_manager.cpp

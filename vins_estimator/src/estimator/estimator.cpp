@@ -11,8 +11,6 @@
 
 Estimator::Estimator(): f_manager{Rs}
 {
-    LOG(INFO) <<"Estimator::Estimator()"; //@@@@@
-
 #ifdef ENABLE_MYNT_SDK
     m_pvisual = new CVisualSDK();
 #elif defined (ENABLE_MYNT_ROS)
@@ -23,7 +21,11 @@ Estimator::Estimator(): f_manager{Rs}
     LOG(INFO) <<"init begins";
     m_pvisual->Init();
     for (int i = 0; i < WINDOW_SIZE + 1; i++)
-        pre_integrations[i] = nullptr;        
+    {
+        pre_integrations[i] = nullptr;
+    }
+    tmp_pre_integration = nullptr;
+    last_marginalization_info = nullptr;
 
     initThreadFlag = false;
     clearState();
@@ -99,12 +101,15 @@ void Estimator::clearState()
     all_image_frame.clear();
 
     if (tmp_pre_integration != nullptr)
+    {
         delete tmp_pre_integration;
+        tmp_pre_integration = nullptr;
+    }
     if (last_marginalization_info != nullptr)
+    {
         delete last_marginalization_info;
-
-    tmp_pre_integration = nullptr;
-    last_marginalization_info = nullptr;
+        last_marginalization_info = nullptr;
+    }
     last_marginalization_parameter_blocks.clear();
 
     f_manager.clearState();
@@ -327,7 +332,7 @@ void Estimator::processMeasurements()
                     break;
                 else
                 {
-                    printf("wait for imu ... \n");//SONG:用S1030经常发现有这个提示。单用EuRoC极少出现。
+                    // printf("wait for imu ... \n");//SONG:用S1030经常发现有这个提示。单用EuRoC极少出现。 @@@@@
                     if (! MULTIPLE_THREAD)
                         return;
                     std::chrono::milliseconds dura(5);
@@ -344,9 +349,11 @@ void Estimator::processMeasurements()
             if(USE_IMU)
             {
                 if(!initFirstPoseFlag)
+                {
                     //SONG: 获取IMU的初始姿态，并赋给Rs[0]。
                     //有个问题：此时需要初始时的body要在静止状态，否则得到的初始姿态是不准的。
                     initFirstIMUPose(accVector);
+                }
                 for(size_t i = 0; i < accVector.size(); i++)
                 {
                     double dt;

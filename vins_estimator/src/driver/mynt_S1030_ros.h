@@ -26,26 +26,26 @@ class CMyntS1030ROSDriver : public CDriverBase
 private:
 
 public:
-  CMyntS1030ROSDriver();
-  virtual ~CMyntS1030ROSDriver();
+    CMyntS1030ROSDriver();
+    virtual ~CMyntS1030ROSDriver();
 
-  virtual bool Init();
-  virtual bool Init(int argc, char **argv);
-  virtual void Start();
-  virtual void Stop();
-  virtual void ThreadGetData();
+    virtual bool Init();
+    virtual bool Init(int argc, char **argv);
+    virtual void Start();
+    virtual void Stop();
+    virtual void ThreadGetData();
 
-  SImgData ImageDataConvert(const sensor_msgs::ImageConstPtr &img_msg);
-  SImuData IMUDataConvert(const sensor_msgs::ImuConstPtr &imu_msg);
-  // SImgData ModifyImage(const cv::Mat img, const SImgData imgData);
+    SImgData ImageDataConvert(const sensor_msgs::ImageConstPtr &img_msg);
+    SImuData IMUDataConvert(const sensor_msgs::ImuConstPtr &imu_msg);
+    // SImgData ModifyImage(const cv::Mat img, const SImgData imgData);
   
 private:
-  void img0_callback(const sensor_msgs::ImageConstPtr &img_msg);
-  void img1_callback(const sensor_msgs::ImageConstPtr &img_msg);
-  void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg);
-  void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg);
-  void restart_callback(const std_msgs::BoolConstPtr &restart_msg);
-  void imu_switch_callback(const std_msgs::BoolConstPtr &switch_msg);
-  void cam_switch_callback(const std_msgs::BoolConstPtr &switch_msg);
+    void img0_callback(const sensor_msgs::ImageConstPtr &img_msg);
+    void img1_callback(const sensor_msgs::ImageConstPtr &img_msg);
+    void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg);
+    void feature_callback(const sensor_msgs::PointCloudConstPtr &feature_msg);
+    void restart_callback(const std_msgs::BoolConstPtr &restart_msg);
+    void imu_switch_callback(const std_msgs::BoolConstPtr &switch_msg);
+    void cam_switch_callback(const std_msgs::BoolConstPtr &switch_msg);
 
 };

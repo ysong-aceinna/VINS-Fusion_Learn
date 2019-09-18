@@ -17,4 +17,6 @@ public:
     virtual void ShowLatestOdometry(const Eigen::Vector3d &P, const Eigen::Quaterniond &Q, const Eigen::Vector3d &V, double t);
     virtual void ShowResults(const Estimator &estimator, double timestamp);
 
+    void ShowPositionAttitude(const Estimator &estimator, double timestamp);
+
 };

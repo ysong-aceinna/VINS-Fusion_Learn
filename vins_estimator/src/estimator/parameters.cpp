@@ -204,7 +204,7 @@ void readParameters(std::string config_file)
     }
 
     B_ADD_EXTRA_NOISE = fsSettings["b_add_extra_noise"];
-    cout << "b_add_extra_noise:" << B_ADD_EXTRA_NOISE << endl;
+    LOG(WARNING) << "Add extra noise to IMU:" << B_ADD_EXTRA_NOISE;
 
     if(1 == B_ADD_EXTRA_NOISE)
     {

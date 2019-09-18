@@ -7,6 +7,7 @@ Panels:
         - /Global Options1
         - /VIOGroup1
         - /GlobalGroup1/CarModel1
+        - /TF1
         - /TF1/Frames1
         - /TF1/Tree1
       Splitter Ratio: 0.4651159942150116
@@ -334,7 +335,27 @@ Visualization Manager:
         body:
           Value: true
         camera:
-          Value: true
+          Value: false
+        camera_imu_frame:
+          Value: false
+        mynteye_depth_frame:
+          Value: false
+        mynteye_disparity_frame:
+          Value: false
+        mynteye_disparity_norm_frame:
+          Value: false
+        mynteye_left_frame:
+          Value: false
+        mynteye_left_rect_frame:
+          Value: false
+        mynteye_link:
+          Value: false
+        mynteye_points_frame:
+          Value: false
+        mynteye_right_frame:
+          Value: false
+        mynteye_right_rect_frame:
+          Value: false
         world:
           Value: false
       Marker Scale: 1
@@ -375,7 +396,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 29.702367782592773
+      Distance: 6.388615608215332
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -412,7 +433,7 @@ Window Geometry:
     collapsed: true
   Width: 1608
   X: 186
-  Y: 147
+  Y: 117
   loop_match_Image:
     collapsed: false
   track_image:

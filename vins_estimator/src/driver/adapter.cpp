@@ -27,7 +27,7 @@ void CAdapter::UpdateLeftImage(SImgData& img)
 {
     // cv::imshow("Left", img.frame);
     // cv::waitKey(1);
-    // LOG(INFO) << "Left frame_id: " << img.frame_id << "  ,Left time: " << img.timestamp/1000;
+    // LOG(INFO) << "Left frame_id: " << img.frame_id << ",timestamp: " << setiosflags(ios::fixed) << img.timestamp;
     m_buf.lock();
     img0_buf.push(img);
     m_buf.unlock();
@@ -37,17 +37,16 @@ void CAdapter::UpdateRightImage(SImgData& img)
 {
     // cv::imshow("Right", img.frame);
     // cv::waitKey(1);
-    // LOG(INFO) << "Right frame_id: " << img.frame_id << "  ,Right time: " << img.timestamp/1000;
+    // LOG(INFO) << "Right frame_id: " << img.frame_id << ",timestamp: " << setiosflags(ios::fixed) << img.timestamp;
     m_buf.lock();
     img1_buf.push(img);
     m_buf.unlock();
-
 }
 
 void CAdapter::UpdateIMU(SImuData& imu)
 {
     // LOG(INFO) << "Imu frame_id: " << imu.frame_id
-    //             << ", timestamp: " << imu.timestamp/1000
+    //             << ", timestamp: " << imu.timestamp
     //             << ", accel_x: " << imu.accel[0]
     //             << ", accel_y: " << imu.accel[1]
     //             << ", accel_z: " << imu.accel[2]
@@ -56,6 +55,8 @@ void CAdapter::UpdateIMU(SImuData& imu)
     //             << ", gyro_z: " << imu.gyro[2]
     //             << ", temperature: " << imu.temperature;
 
+    // LOG(INFO) << "Imu frame_id: " << setiosflags(ios::fixed) << imu.frame_id
+    //             << ", timestamp: " << imu.timestamp;
 
     Eigen::Vector3d acc(imu.accel[0], imu.accel[1], imu.accel[2]);
     Eigen::Vector3d gyr(imu.gyro[0], imu.gyro[1], imu.gyro[2]);

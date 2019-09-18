@@ -41,7 +41,7 @@ int main(int argc, char **argv)
     }
     string config_file = argv[1];
     LOG(INFO) << "config_file: " << argv[1];
-    readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量 !!!!! 改为单态
+    readParameters(config_file);//SONG:从配置文件读取配置参数，并赋给全局变量 !!!!!
 
     pdriver->ReadParameters(config_file);
     if(! pdriver->Init(argc, argv))
@@ -55,7 +55,7 @@ int main(int argc, char **argv)
     pdriver->Start();
 
 #ifdef ENABLE_MYNT_SDK
-    while (1);
+    while (1) sleep(1);
 #elif defined (ENABLE_MYNT_ROS)
 #else  
 #endif
