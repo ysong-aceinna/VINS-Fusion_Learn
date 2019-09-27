@@ -7,7 +7,7 @@ option (ENABLE_ROS "Enable ROS driver." OFF)
 ####################################################
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++11") #-march=native
+set(CMAKE_CXX_FLAGS "-std=c++17 -march=native") #-march=native
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fPIC")
 
 if (ENABLE_ROS)

@@ -272,7 +272,7 @@ void MarginalizationInfo::marginalize()
         b += threadsstruct[i].b;
     }
     
-    // DLOG(MARNING) << "thread summing up costs " << t_thread_summing.toc() << " ms");
+    // DLOG(WARNING) << "thread summing up costs " << t_thread_summing.toc() << " ms";
     // LOG(INFO) << "A diff " << (A - tmp_A).sum() << " , b diff " << (b - tmp_b).sum();
 
 

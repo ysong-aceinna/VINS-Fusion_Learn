@@ -9,10 +9,10 @@
 CMyntS1030Driver::CMyntS1030Driver()
 {
     cout << "CMyntS1030Driver:CMyntS1030Driver()" << endl;
-    m_fps = 20;         // FRAME_RATE values: 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, default is 25
+    m_fps = 15;         // FRAME_RATE values: 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, default is 25
     m_odr = 200;        // IMU_FREQUENCY values: 100, 200, 250, 333, 500, default is 200
-    m_width = 752;
-    m_height = 480;
+    // m_width = 752;
+    // m_height = 480;
 }
 
 CMyntS1030Driver::~CMyntS1030Driver()

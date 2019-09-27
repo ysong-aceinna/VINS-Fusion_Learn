@@ -32,9 +32,9 @@
 
 // common macros
 #if !defined (SAFEDELETE)
-#define SAFEDELETE(p) if( (p) ){ delete (p); (p) = NULL; }
+#define SAFEDELETE(p) if( (p) ){ delete (p); (p) = nullptr; }
 #endif
 
 #if !defined (SAFEDELETEARRAY)
-#define SAFEDELETEARRAY(p) if( (p) ){ delete [] (p); (p) = NULL; }
+#define SAFEDELETEARRAY(p) if( (p) ){ delete [] (p); (p) = nullptr; }
 #endif

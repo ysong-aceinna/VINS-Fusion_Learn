@@ -10,11 +10,11 @@ option (ENABLE_MYNT_ROS "Enable MYNT ROS driver." OFF)
 set(COMPILE_TYPE Release)
 if(COMPILE_TYPE STREQUAL "Release")
   set(CMAKE_BUILD_TYPE "Release")
-  set(CMAKE_CXX_FLAGS "-std=c++11") # -march=native
-  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -g")
+  set(CMAKE_CXX_FLAGS "-std=c++17 -march=native") # -march=native
+  set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall")
 elseif(COMPILE_TYPE STREQUAL "Debug")
   SET(CMAKE_BUILD_TYPE "Debug")
-  set(CMAKE_CXX_FLAGS "-std=c++11") # -march=native
+  set(CMAKE_CXX_FLAGS "-std=c++17 -march=native") # -march=native
   SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 else()
   message(FATAL_ERROR "COMPILE_TYPE is Error!")

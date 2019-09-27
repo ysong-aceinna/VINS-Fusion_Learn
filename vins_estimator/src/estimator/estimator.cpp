@@ -31,7 +31,7 @@ Estimator::Estimator(): f_manager{Rs}
     clearState();
 
     //record accel and gyro bias evaluated by VINS.
-    m_fout_imu_bias = ofstream("/home/song/catkin_ws/imu_bias.csv", ios::app);
+    m_fout_imu_bias = ofstream("/home/pi/project/VINS-Fusion_Learn/imu_bias.csv", ios::app);
     if (!m_fout_imu_bias)
     {
         LOG(ERROR) << "open file failed! Exit ...";
@@ -199,7 +199,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         featureFrame = featureTracker.trackImage(t, _img);
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
-    //printf("featureTracker time: %f\n", featureTrackerTime.toc());
+    LOG(INFO) << "featureTracker time: " << featureTrackerTime.toc();
 
     //SONG:imgTrack是在输入图像上绘制红、绿、蓝特征点的图像。
     if (SHOW_TRACK)

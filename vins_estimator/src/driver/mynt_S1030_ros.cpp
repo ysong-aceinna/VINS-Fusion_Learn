@@ -34,7 +34,6 @@ void CMyntS1030ROSDriver::Start()
 {
     LOG(INFO) << "CMyntS1030ROSDriver::Start()";
 
-<<<<<<< HEAD
     ros::NodeHandle n("~");
     ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info); //Info  Debug   Warn, Error,Fatal,
 
@@ -48,21 +47,6 @@ void CMyntS1030ROSDriver::Start()
     ros::Subscriber sub_cam_switch = n.subscribe("/vins_cam_switch", 100, &CMyntS1030ROSDriver::cam_switch_callback, this);
 
     ros::spin();
-=======
-  ros::NodeHandle n("~");
-  ros::console::set_logger_level(ROSCONSOLE_DEFAULT_NAME, ros::console::levels::Info); //Info  Debug
-  ROS_WARN("waiting for image and imu...");
-  registerPub(n);
-  ros::Subscriber sub_imu = n.subscribe(m_imu_topic, 2000, &CMyntS1030ROSDriver::imu_callback, this, ros::TransportHints().tcpNoDelay());
-  ros::Subscriber sub_feature = n.subscribe("/feature_tracker/feature", 2000, &CMyntS1030ROSDriver::feature_callback, this);
-  ros::Subscriber sub_img0 = n.subscribe(m_image0_topic, 100, &CMyntS1030ROSDriver::img0_callback, this);
-  ros::Subscriber sub_img1 = n.subscribe(m_image1_topic, 100, &CMyntS1030ROSDriver::img1_callback, this);
-  ros::Subscriber sub_restart = n.subscribe("/vins_restart", 100, &CMyntS1030ROSDriver::restart_callback, this);
-  ros::Subscriber sub_imu_switch = n.subscribe("/vins_imu_switch", 100, &CMyntS1030ROSDriver::imu_switch_callback, this);
-  ros::Subscriber sub_cam_switch = n.subscribe("/vins_cam_switch", 100, &CMyntS1030ROSDriver::cam_switch_callback, this);
-  LOG(INFO) << "Subscribe done...";
-  ros::spin();
->>>>>>> a23bf980f72eb2f5d1eb8f2c553c63951478eaaf
 }
 
 void CMyntS1030ROSDriver::Stop()

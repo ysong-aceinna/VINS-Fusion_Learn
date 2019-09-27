@@ -35,16 +35,6 @@ public:
     CDriverBase();
     virtual ~CDriverBase();
 
-    // void SetParameters(int fps, int odr, int width, int height, bool use_imu, bool b_mono)
-    // {
-    //     m_fps = fps;
-    //     m_odr = odr;
-    //     m_width = width;
-    //     m_height = height;        
-    //     m_use_imu = use_imu;
-    //     m_bmono = b_mono;
-    // }
-
     virtual bool Init() = 0;
     virtual bool Init(int argc, char **argv) = 0;
     virtual void Start() = 0;

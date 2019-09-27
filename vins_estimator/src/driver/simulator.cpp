@@ -33,8 +33,8 @@ NoiseModel noise_model_array[] = {               //ARW:deg/√hr,  VRW:m/s/√hr
 
 CSimulator::CSimulator()
 {
-    accel_noise = NULL;
-    gyro_noise = NULL;
+    accel_noise = nullptr;
+    gyro_noise = nullptr;
     noise_count_accel = 0;
     noise_count_gyro = 0;
     idx = 0;
@@ -42,8 +42,8 @@ CSimulator::CSimulator()
 
 CSimulator::~CSimulator()
 {
-    // SAFEDELETEARRAY(accel_noise);
-    // SAFEDELETEARRAY(gyro_noise);
+    SAFEDELETEARRAY(accel_noise);
+    SAFEDELETEARRAY(gyro_noise);
 }
 
 //ref:https://stackoverflow.com/questions/32889309/adding-gaussian-noise

@@ -72,6 +72,7 @@ class Utility
         return ans;
     }
 
+    //SONG: 注意,返回的单位为deg,而不是rad.
     static Eigen::Vector3d R2ypr(const Eigen::Matrix3d &R)
     {
         Eigen::Vector3d n = R.col(0);
