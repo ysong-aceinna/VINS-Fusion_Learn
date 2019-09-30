@@ -1,25 +1,36 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(vins)
 
-############### Choose driver type #################
-option (ENABLE_MYNT_SDK "Enable MYNT SDK." ON)
-option (ENABLE_MYNT_ROS "Enable MYNT ROS driver." OFF)
+############## Select on Pi or Ubuntu ##############
+option (ENABLE_PI  "Enable PI." OFF)
 ####################################################
+if (ENABLE_PI)
+    option (ENABLE_MYNT_SDK "Enable SDK." ON)
+    option (ENABLE_MYNT_ROS "Enable ROS driver." OFF)
+else ()
+    option (ENABLE_MYNT_SDK "Enable SDK." OFF)
+    option (ENABLE_MYNT_ROS "Enable ROS driver." ON)
+endif()
 
-############## Set Release or Debug ################
+
+############## Select Release or Debug ################
 set(COMPILE_TYPE Release)
 if(COMPILE_TYPE STREQUAL "Release")
   set(CMAKE_BUILD_TYPE "Release")
-  set(CMAKE_CXX_FLAGS "-std=c++17 -march=native") # -march=native
+  set(CMAKE_CXX_FLAGS "-std=c++17")
   set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall")
 elseif(COMPILE_TYPE STREQUAL "Debug")
   SET(CMAKE_BUILD_TYPE "Debug")
-  set(CMAKE_CXX_FLAGS "-std=c++17 -march=native") # -march=native
+  set(CMAKE_CXX_FLAGS "-std=c++17")
   SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O0 -Wall -g -ggdb")
 else()
   message(FATAL_ERROR "COMPILE_TYPE is Error!")
 endif()
   message(AUTHOR_WARNING "COMPILE_TYPE = ${COMPILE_TYPE}")
+
+if (ENABLE_PI)
+  set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-march=native")
+endif()
 ####################################################
 find_package(Threads REQUIRED)
 

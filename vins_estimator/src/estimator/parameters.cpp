@@ -46,6 +46,7 @@ int MAX_CNT;
 int MIN_DIST;
 double F_THRESHOLD;
 int SHOW_TRACK;
+int SHOW_PATH;
 int FLOW_BACK;
 int B_ADD_EXTRA_NOISE;
 int EXTRA_NOISE_IDX;
@@ -72,6 +73,7 @@ void readParameters(std::string config_file)
     MIN_DIST = fsSettings["min_dist"];
     F_THRESHOLD = fsSettings["F_threshold"];
     SHOW_TRACK = fsSettings["show_track"];
+    SHOW_PATH = fsSettings["show_path"];
     FLOW_BACK = fsSettings["flow_back"];
 
     MULTIPLE_THREAD = fsSettings["multiple_thread"];

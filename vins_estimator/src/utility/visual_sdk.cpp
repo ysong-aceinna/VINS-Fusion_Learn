@@ -59,9 +59,12 @@ void CVisualSDK::ShowPositionAttitude(const Estimator &estimator, double timesta
         //         << estimator.Vs[WINDOW_SIZE].y() << ","
         //         << estimator.Vs[WINDOW_SIZE].z() << "," << endl;
         Eigen::Vector3d tmp_T = estimator.Ps[WINDOW_SIZE];
-        printf("time: %f, t: %f %f %f q: %f %f %f %f YPR: %f %f %f \n", timestamp, tmp_T.x(), tmp_T.y(), tmp_T.z(),
-                                                          tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z(),
-                                                          YPR.x(), YPR.y(), YPR.z());
+        // printf("time: %f, t: %f %f %f q: %f %f %f %f YPR: %f %f %f \n", timestamp, tmp_T.x(), tmp_T.y(), tmp_T.z(),
+        //                                                   tmp_Q.w(), tmp_Q.x(), tmp_Q.y(), tmp_Q.z(),
+        //                                                   YPR.x(), YPR.y(), YPR.z());
+        LOG(INFO) << "time: " << timestamp
+                  << ", t: " << tmp_T.x() << " " << tmp_T.y() << " " << tmp_T.z()
+                  << " YPR: " << YPR.x() << " " << YPR.y() << " " << YPR.z();
 
     }
 }

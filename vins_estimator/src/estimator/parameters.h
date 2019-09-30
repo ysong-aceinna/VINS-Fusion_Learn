@@ -63,6 +63,7 @@ extern int MAX_CNT;
 extern int MIN_DIST;
 extern double F_THRESHOLD;
 extern int SHOW_TRACK;
+extern int SHOW_PATH;
 extern int FLOW_BACK;
 extern int B_ADD_EXTRA_NOISE;
 extern int EXTRA_NOISE_IDX;

@@ -9,8 +9,8 @@ CDriverBase::CDriverBase()
 { 
     cout << "CDriverBase:CDriverBase()" << endl;
     m_padapter = NULL;
-    m_fps = 0;
-    m_odr = 0;
+    m_img_fps = 0;
+    m_imu_odr = 0;
     m_width = 0;
     m_height = 0;
     m_bROS = false;
@@ -68,6 +68,8 @@ void CDriverBase::ReadParameters(std::string config_file)
 
     m_width = fsSettings["image_width"];
     m_height = fsSettings["image_height"];
+    m_img_fps = fsSettings["image_fps"];
+    m_imu_odr = fsSettings["imu_odr"];
 
     fsSettings.release();
 }

@@ -9,8 +9,8 @@
 CMyntS1030Driver::CMyntS1030Driver()
 {
     cout << "CMyntS1030Driver:CMyntS1030Driver()" << endl;
-    m_fps = 15;         // FRAME_RATE values: 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, default is 25
-    m_odr = 200;        // IMU_FREQUENCY values: 100, 200, 250, 333, 500, default is 200
+    // m_img_fps = 15;         // FRAME_RATE values: 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, default is 25
+    // m_imu_odr = 200;        // IMU_FREQUENCY values: 100, 200, 250, 333, 500, default is 200
     // m_width = 752;
     // m_height = 480;
 }
@@ -41,8 +41,8 @@ bool CMyntS1030Driver::Init(int argc, char **argv)
     m_api->ConfigStreamRequest(request);
 
     // Attention: must set FRAME_RATE and IMU_FREQUENCY together, otherwise won't be succeed.
-    m_api->SetOptionValue(Option::FRAME_RATE, m_fps);
-    m_api->SetOptionValue(Option::IMU_FREQUENCY, m_odr);
+    m_api->SetOptionValue(Option::FRAME_RATE, m_img_fps);
+    m_api->SetOptionValue(Option::IMU_FREQUENCY, m_imu_odr);
 
     LOG(WARNING) << "Device info: "<< endl
             << "Device name: " << m_api->GetInfo(Info::DEVICE_NAME) << endl

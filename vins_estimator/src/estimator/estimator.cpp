@@ -31,12 +31,12 @@ Estimator::Estimator(): f_manager{Rs}
     clearState();
 
     //record accel and gyro bias evaluated by VINS.
-    m_fout_imu_bias = ofstream("/home/pi/project/VINS-Fusion_Learn/imu_bias.csv", ios::app);
-    if (!m_fout_imu_bias)
-    {
-        LOG(ERROR) << "open file failed! Exit ...";
-        exit(EXIT_FAILURE);
-    }
+    // m_fout_imu_bias = ofstream("/home/pi/project/VINS-Fusion_Learn/imu_bias.csv", ios::app);
+    // if (!m_fout_imu_bias)
+    // {
+    //     LOG(ERROR) << "open file failed! Exit ...";
+    //     exit(EXIT_FAILURE);
+    // }
 }
 
 Estimator::~Estimator()
@@ -191,6 +191,7 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
 void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
 {
     inputImageCnt++;
+    // if(inputImageCnt % 2 == 0) return;
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
     TicToc featureTrackerTime;
 
@@ -199,7 +200,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         featureFrame = featureTracker.trackImage(t, _img);
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
-    LOG(INFO) << "featureTracker time: " << featureTrackerTime.toc();
+    // LOG(INFO) << "featureTracker time: " << featureTrackerTime.toc();
 
     //SONG:imgTrack是在输入图像上绘制红、绿、蓝特征点的图像。
     if (SHOW_TRACK)
@@ -210,7 +211,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
     
     if(MULTIPLE_THREAD)  
     {     
-        if(inputImageCnt % 2 == 0)    //SONG:若采用多线程，只将偶数帧的featureFrame保存到featureBuf
+        if(inputImageCnt % 1 == 0)    //SONG:若采用多线程，只将偶数帧的featureFrame保存到featureBuf
         {
             mBuf.lock();
             featureBuf.push(make_pair(t, featureFrame));
@@ -1667,7 +1668,7 @@ void Estimator::updateLatestStates()
     // cout << "latest_time:" << fixed << setprecision(3) << latest_time << "(s)" << endl;
     // printf("t: %f\n", latest_time);
     // cout << latest_Ba.transpose() << "," << latest_Bg.transpose() << endl;
-    saveIMUBias(latest_time, latest_Ba, latest_Bg);
+    // saveIMUBias(latest_time, latest_Ba, latest_Bg);
 }
 
 //SONG: 保存accel和gyro的bias到文件.

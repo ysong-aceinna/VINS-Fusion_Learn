@@ -171,14 +171,17 @@ void CVisualROS::pubOdometry(const Estimator &estimator, const std_msgs::Header 
         odometry.twist.twist.linear.z = estimator.Vs[WINDOW_SIZE].z();
         pub_odometry.publish(odometry);
 
-        geometry_msgs::PoseStamped pose_stamped;
-        pose_stamped.header = header;
-        pose_stamped.header.frame_id = "world";
-        pose_stamped.pose = odometry.pose.pose;
-        path.header = header;
-        path.header.frame_id = "world";
-        path.poses.push_back(pose_stamped);
-        pub_path.publish(path);
+        if(SHOW_PATH)
+        {
+            geometry_msgs::PoseStamped pose_stamped;
+            pose_stamped.header = header;
+            pose_stamped.header.frame_id = "world";
+            pose_stamped.pose = odometry.pose.pose;
+            path.header = header;
+            path.header.frame_id = "world";
+            path.poses.push_back(pose_stamped);
+            pub_path.publish(path);
+        }
 
         //SONG: add YPR msg from Q.
         // method 1:

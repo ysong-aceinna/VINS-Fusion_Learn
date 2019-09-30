@@ -1,14 +1,25 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(camera_models)
 
-############### Choose driver type #################
-option (ENABLE_SDK "Enable SDK." ON)
-option (ENABLE_ROS "Enable ROS driver." OFF)
+############## Select on Pi or Ubuntu ##############
+option (ENABLE_PI  "Enable PI." OFF)
+####################################################
+if (ENABLE_PI)
+    option (ENABLE_SDK "Enable SDK." ON)
+    option (ENABLE_ROS "Enable ROS driver." OFF)
+else ()
+    option (ENABLE_SDK "Enable SDK." OFF)
+    option (ENABLE_ROS "Enable ROS driver." ON)
+endif()
 ####################################################
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "-std=c++17 -march=native") #-march=native
+set(CMAKE_CXX_FLAGS "-std=c++17")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -fPIC")
+
+if (ENABLE_PI)
+    set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-march=native")
+endif()
 
 if (ENABLE_ROS)
     find_package(catkin REQUIRED COMPONENTS

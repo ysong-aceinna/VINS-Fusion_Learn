@@ -13,8 +13,8 @@
 class CDriverBase
 {
 protected:
-    int m_fps;        // frames per second of images
-    int m_odr;        // odr of imu
+    int m_img_fps;        // frames per second of images
+    int m_imu_odr;        // odr of imu
     int m_width;      // width of image
     int m_height;     // height of image
     bool m_bROS;
