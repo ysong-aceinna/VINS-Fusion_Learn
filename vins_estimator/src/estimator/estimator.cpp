@@ -200,7 +200,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         featureFrame = featureTracker.trackImage(t, _img);
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
-    // LOG(INFO) << "featureTracker time: " << featureTrackerTime.toc();
+    LOG(INFO) << "featureTracker time: " << featureTrackerTime.toc();
 
     //SONG:imgTrack是在输入图像上绘制红、绿、蓝特征点的图像。
     if (SHOW_TRACK)
@@ -239,9 +239,10 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
     //printf("input imu with time %f \n", t);
     mBuf.unlock();
 
-    //SONG:IMU的预计分。需要看论文了解预计分的原理。
+    //SONG:IMU快速计分求当前的速度和位置。
+    // 我觉得这里的fastPredictIMU可以删掉，因为在processImage中又被重复调用了。
     fastPredictIMU(t, linearAcceleration, angularVelocity);
-    if (solver_flag == NON_LINEAR)
+    if (solver_flag == NON_LINEAR) //除了在image到来时得到准确位姿外，还可以在相邻两图像帧间根据IMU递推最新的位姿，和IMU同频率。
     {
         m_pvisual->ShowLatestOdometry(latest_P, latest_Q, latest_V, t);
     }
@@ -416,7 +417,9 @@ void Estimator::initFirstPose(Eigen::Vector3d p, Eigen::Matrix3d r)
     initR = r;
 }
 
-//SONG:处理IMU数据，没看懂。
+//SONG: 
+// 1. 类似fastPredictIMU,递推速度和位置，不同的是fastPredictIMU是递推到latest_P，而这里是递推到Ps。
+// 2. 构造pre_integrations，它会计算雅克比矩阵、残差的协方差矩阵等参数，这些参数优化时会用到。
 void Estimator::processIMU(double t, double dt, const Vector3d &linear_acceleration, const Vector3d &angular_velocity)
 {
     if (!first_imu)
@@ -453,6 +456,16 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
     gyr_0 = angular_velocity; 
 }
 
+/*
+为了处理一些悬停的case,引入了一个two-way marginalization, 
+简单来说就是:如果倒数第二帧是关键帧, 则将最旧的pose移出sliding window, 
+将最旧帧相关联的视觉和惯性数据边缘化掉，也就是MARGIN_OLD，
+作为一部分先验值,如果倒数第二帧不是关键帧, 则将倒数第二帧pose移出sliding window,
+将倒数第二帧的视觉观测值直接舍弃，保留相关联的IMU数据， 也就是MARGIN_NEW。
+选取关键帧的策略是视差足够大，在悬停等运动较小的情况下, 会频繁的MARGIN_NEW, 
+这样也就保留了那些比较旧但是视差比较大的pose. 这种情况如果一直MARGIN_OLD的话, 
+视觉约束不够强, 状态估计会受IMU积分误差影响, 具有较大的累积误差。
+*/
 void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> &image, const double header)
 {
     DLOG(INFO) << "new image coming ------------------------------------------";
@@ -597,7 +610,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
             
         DLOG(INFO) << "solver costs: " << t_solve.toc() << "ms";
 
-//SONG: 失效自检测，自动重启算法。实际上由于failureDetection强制return false，所以下边的if永远没有执行。
+        //SONG: 失效自检测，自动重启算法。实际上由于failureDetection强制return false，所以下边的if永远没有执行。
         if (failureDetection())
         {
             LOG(WARNING) << "failure detection";
@@ -626,6 +639,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 bool Estimator::initialStructure()
 {
     TicToc t_sfm;
+    //SONG:检查IMU的运动幅度是不是太小。实践中发现，当image帧率较小时，需要更大的IMU运动幅度。
     //check imu observibility
     {
         map<double, ImageFrame>::iterator frame_it;
@@ -675,13 +689,15 @@ bool Estimator::initialStructure()
     } 
     Matrix3d relative_R;
     Vector3d relative_T;
-    int l;
-    if (!relativePose(relative_R, relative_T, l))
+    int l; //SONG: 计算出relative_R, relative_T时，WINDOW_SIZE的编号索引。
+    if (!relativePose(relative_R, relative_T, l)) //SONG:根据对极几何，先求F基础矩阵，再求relative_R, relative_T。
     {
         LOG(INFO) << "Not enough features or parallax; Move device around";
         return false;
     }
     GlobalSFM sfm;
+    //SONG: 利用对极几何求出的relative_R, relative_T并不准确，
+    // 需要在sfm.construct中进一步优化，Q, T是优化后的结果。
     if(!sfm.construct(frame_count + 1, Q, T, l,
               relative_R, relative_T,
               sfm_f, sfm_tracked_points))
@@ -744,6 +760,7 @@ bool Estimator::initialStructure()
             DLOG(INFO) << "ot enough points for solve pnp!";
             return false;
         }
+        //SONG: 求解PnP, 这里内参矩阵K用单位阵，是不是有问题?
         if (! cv::solvePnP(pts_3_vector, pts_2_vector, K, D, rvec, t, 1))
         {
             DLOG(INFO) << "solve pnp fail!";
@@ -830,6 +847,7 @@ bool Estimator::visualInitialAlign()
     return true;
 }
 
+//SONG:根据对极几何，先求F基础矩阵，再求R和T。
 bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
 {
     // find previous frame which contians enough correspondance and parallex with newest frame
@@ -929,9 +947,10 @@ void Estimator::double2vector()
                                                           para_Pose[0][3],
                                                           para_Pose[0][4],
                                                           para_Pose[0][5]).toRotationMatrix());
-        double y_diff = origin_R0.x() - origin_R00.x();
+        double y_diff = origin_R0.x() - origin_R00.x(); //SONG: yaw的差值
         //TODO
         Matrix3d rot_diff = Utility::ypr2R(Vector3d(y_diff, 0, 0));
+        //SONG: 处理pitch在90度附近时的奇异值问题。但不知道为什么乘以T。
         if (abs(abs(origin_R0.y()) - 90) < 1.0 || abs(abs(origin_R00.y()) - 90) < 1.0)
         {
             DLOG(INFO) << "euler singular point!";
@@ -977,6 +996,7 @@ void Estimator::double2vector()
 
     if(USE_IMU)
     {
+        //SONG: tic和ric是经过精确测量并已作为已知量，此处被重新赋值是有问题的。同理下边的td.
         for (int i = 0; i < NUM_OF_CAM; i++)
         {
             tic[i] = Vector3d(para_Ex_Pose[i][0],
@@ -1051,11 +1071,7 @@ bool Estimator::failureDetection()
 void Estimator::optimization()
 {
     TicToc t_whole, t_prepare;
-    // cout << "Bas1:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
-    // cout << "Bgs1:" << Bgs[10].transpose() << "," << para_SpeedBias[10][6]<< "," << para_SpeedBias[10][7]<< "," << para_SpeedBias[10][8] << endl;
     vector2double();
-    // cout << "Bas2:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
-    // cout << "Bgs2:" << Bgs[10].transpose() << "," << para_SpeedBias[10][6]<< "," << para_SpeedBias[10][7]<< "," << para_SpeedBias[10][8] << endl;
 
     ceres::Problem problem;
     ceres::LossFunction *loss_function;
@@ -1179,13 +1195,9 @@ void Estimator::optimization()
     ceres::Solve(options, &problem, &summary);
     //cout << summary.BriefReport() << endl;
     DLOG(INFO) << "Iterations : " << static_cast<int>(summary.iterations.size());
-    //printf("solver costs: %f \n", t_solver.toc());
+    printf("optimization solver costs: %f \n", t_solver.toc());
 
-    // cout << "Bas3:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
-    // cout << "Bgs3:" << Bgs[10].transpose() << "," << para_SpeedBias[10][6]<< "," << para_SpeedBias[10][7]<< "," << para_SpeedBias[10][8] << endl;
     double2vector();
-    // cout << "Bas4:" << Bas[10].transpose() << "," << para_SpeedBias[10][3]<< "," << para_SpeedBias[10][4]<< "," << para_SpeedBias[10][5] << endl;
-    // cout << "Bgs4:" << Bgs[10].transpose() << "," << para_SpeedBias[10][6]<< "," << para_SpeedBias[10][7]<< "," << para_SpeedBias[10][8] << endl;
     //printf("frame_count: %d \n", frame_count);
 
     if(frame_count < WINDOW_SIZE)
@@ -1624,18 +1636,18 @@ void Estimator::outliersRejection(set<int> &removeIndex)
 
     }
 }
-//SONG:IMU的预计分。须要结合论文算法来理解。
-//
+
+//SONG:IMU快速计分求当前的速度和位置。
 void Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity)
 {
     double dt = t - latest_time; //SONG:Delta t
     latest_time = t;
-    Eigen::Vector3d un_acc_0 = latest_Q * (latest_acc_0 - latest_Ba) - g;
-    Eigen::Vector3d un_gyr = 0.5 * (latest_gyr_0 + angular_velocity) - latest_Bg;
-    latest_Q = latest_Q * Utility::deltaQ(un_gyr * dt);
-    Eigen::Vector3d un_acc_1 = latest_Q * (linear_acceleration - latest_Ba) - g;
-    Eigen::Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
-    latest_P = latest_P + dt * latest_V + 0.5 * dt * dt * un_acc;
+    Eigen::Vector3d un_acc_0 = latest_Q * (latest_acc_0 - latest_Ba) - g; //求线性加速度。//正常来讲，一个四元数是不能和一个向量直接做乘法的，维度都对不上，参看EigenTest1
+    Eigen::Vector3d un_gyr = 0.5 * (latest_gyr_0 + angular_velocity) - latest_Bg;//取相邻两个gyro的均值。
+    latest_Q = latest_Q * Utility::deltaQ(un_gyr * dt); //由gyro更新姿态矩阵
+    Eigen::Vector3d un_acc_1 = latest_Q * (linear_acceleration - latest_Ba) - g; //求线性加速度
+    Eigen::Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);//求相邻两个线性加速度的均值。
+    latest_P = latest_P + dt * latest_V + 0.5 * dt * dt * un_acc; //推算位置和速度。
     latest_V = latest_V + dt * un_acc;
     latest_acc_0 = linear_acceleration;
     latest_gyr_0 = angular_velocity;

@@ -27,9 +27,11 @@
     Eigen::Matrix3d R0 = Eigen::Quaterniond::FromTwoVectors(ng1, ng2).toRotationMatrix();
     //R0满足：R0*ng1 = ng2
 
+    //用R初始化q
+    Eigen::Quaterniond q{R};
 
-
-
+    //多维vector的初始化
+    VectorXd dep_vec(getFeatureCount());
 
 
 

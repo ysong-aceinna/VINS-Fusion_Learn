@@ -52,6 +52,8 @@ FeatureTracker::FeatureTracker()
     hasPrediction = false;
 }
 
+//SONG:以特征点为圆心，MIN_DIST为半径，在mask上做圆，圆内部用0填充。
+// 如果两个特征点挨得很近小于MIN_DIST的距离，则只按照第一个特征点为圆心画圆，第二个特征点对应的圆就忽略不画了。
 void FeatureTracker::setMask()
 {
     mask = cv::Mat(row, col, CV_8UC1, cv::Scalar(255));
@@ -62,6 +64,7 @@ void FeatureTracker::setMask()
     for (unsigned int i = 0; i < cur_pts.size(); i++)
         cnt_pts_id.push_back(make_pair(track_cnt[i], make_pair(cur_pts[i], ids[i])));
 
+    //cnt_pts_id按照track_cnt中记录的连续跟踪数量的计数器从大到小排序。
     sort(cnt_pts_id.begin(), cnt_pts_id.end(), [](const pair<int, pair<cv::Point2f, int>> &a, const pair<int, pair<cv::Point2f, int>> &b)
          {
             return a.first > b.first;
@@ -71,18 +74,20 @@ void FeatureTracker::setMask()
     ids.clear();
     track_cnt.clear();
 
+    //cur_pts,ids,track_cnt都按照cnt_pts_id记录的特征点的顺序（按照跟踪计数，从大到小排序）
     for (auto &it : cnt_pts_id)
     {
-        if (mask.at<uchar>(it.second.first) == 255)
+        if (mask.at<uchar>(it.second.first) == 255)//如果之前已有特征点对应的圆将本像素设置为0，则不再重复画圆了。
         {
             cur_pts.push_back(it.second.first);
             ids.push_back(it.second.second);
             track_cnt.push_back(it.first);
-            cv::circle(mask, it.second.first, MIN_DIST, 0, -1);
+            cv::circle(mask, it.second.first, MIN_DIST, 0, -1); //最后的-1表示是实心圆，即内部也被填充。
         }
     }
 }
 
+//SONG:计算两点间的欧氏距离
 double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2)
 {
     //printf("pt1: %f %f pt2: %f %f\n", pt1.x, pt1.y, pt2.x, pt2.y);
@@ -114,16 +119,21 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             clahe->apply(rightImg, rightImg);
     }
     */
-    cur_pts.clear();
+    cur_pts.clear(); //cur_pts保存当前帧的特征点
 
-    if (prev_pts.size() > 0)
+    if (prev_pts.size() > 0) //如果上一针检测有特征点
     {
         TicToc t_o;
         vector<uchar> status;
         vector<float> err;
-        if(hasPrediction)
+        if(hasPrediction) //如果之前有做预测，则先按预测的特征点进行匹配。
         {
             cur_pts = predict_pts;
+            //每级金字塔的搜索窗口大小为Size(21, 21)，当摄像头移动过快，
+            //或图像分辨率较高时可能会找不到匹配的特征点，这样会有问题。
+
+            //cur_pts即是输入又是输出，保存匹配成功的特征点。
+            //status是标志位，如果找到了对应特征的流，则将向量的对应元素设置为1；否则，置0。
             cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 1, 
             cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
             
@@ -133,13 +143,13 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
                 if (status[i])
                     succ_num++;
             }
-            if (succ_num < 10)
+            if (succ_num < 10) //如果匹配的特征点数量太少，则增加每级金字塔的搜索窗口大小。
                cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 3);
         }
         else
             cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 3);
         // reverse check
-        if(FLOW_BACK)
+        if(FLOW_BACK) //SONG:perform forward and backward optical flow to improve feature tracking accuracy
         {
             vector<uchar> reverse_status;
             vector<cv::Point2f> reverse_pts = prev_pts;
@@ -147,7 +157,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
             //cv::calcOpticalFlowPyrLK(cur_img, prev_img, cur_pts, reverse_pts, reverse_status, err, cv::Size(21, 21), 3); 
             for(size_t i = 0; i < status.size(); i++)
-            {
+            {           //SONG:根据“forward and backward optical flow”， 若欧氏距离>0.5个像素，也应该被剔除。
                 if(status[i] && reverse_status[i] && distance(prev_pts[i], reverse_pts[i]) <= 0.5)
                 {
                     status[i] = 1;
@@ -160,6 +170,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         for (int i = 0; i < int(cur_pts.size()); i++)
             if (status[i] && !inBorder(cur_pts[i]))
                 status[i] = 0;
+        //根据status剔除误匹配的特征点。
         reduceVector(prev_pts, status);
         reduceVector(cur_pts, status);
         reduceVector(ids, status);
@@ -167,7 +178,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         DLOG(INFO) << "temporal optical flow costs: " << t_o.toc() << "ms";
         //printf("track cnt %d\n", (int)ids.size());
     }
-
+    //每个特征点都有对应的id，track_cnt记录了每个特征点被跟踪到的计数器。
     for (auto &n : track_cnt)
         n++;
 
@@ -176,7 +187,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         //rejectWithF();
         DLOG(INFO) << "set mask begins";
         TicToc t_m;
-        setMask();
+        setMask(); //设置mask：以特征点为圆心，MIN_DIST为半径，在mask上做内部为0像素值的圆。
         DLOG(INFO) << "set mask costs " << t_m.toc() << " ms";
         DLOG(INFO) << "detect feature begins";
 
@@ -188,12 +199,17 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
                 cout << "mask is empty " << endl;
             if (mask.type() != CV_8UC1)
                 cout << "mask type wrong " << endl;
+            //mask中为0的点忽略;
+            //n_pts为输出角点vector；
+            //MAX_CNT - cur_pts.size():最大角点数目
+            //如果在其周围MIN_DIST范围内存在其他更强角点，则将此角点删除
             cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.01, MIN_DIST, mask);
         }
         else
             n_pts.clear();
         DLOG(INFO) << "sdetect feature costs: " << t_t.toc() << " ms";
 
+        //SONG:记录新的角点（特征点）信息。
         for (auto &p : n_pts)
         {
             cur_pts.push_back(p);
@@ -203,6 +219,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         //printf("feature cnt after add %d\n", (int)ids.size());
     }
 
+    //cur_un_pts是归一化平面上的特征点。
     cur_un_pts = undistortedPts(cur_pts, m_camera[0]);
     pts_velocity = ptsVelocity(ids, cur_un_pts, cur_un_pts_map, prev_un_pts_map);
 
@@ -312,12 +329,16 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     return featureFrame;
 }
 
+//SONG:利用求基础矩阵F来剔除被舍弃的特征点。
 void FeatureTracker::rejectWithF()
 {
     if (cur_pts.size() >= 8)
     {
         DLOG(INFO) << "FM ransac begins";
         TicToc t_f;
+        //SONG:un_cur_pts和un_prev_pts是针孔模型中，像素平面的像素点在投影线上距离FOCAL_LENGTH处的点。
+        // 为什么不使用cur_pts和prev_pts，而是使用un_cur_pts和un_prev_pts来求基础矩阵F呢？
+        // 难道cur_pts和prev_pts乘以FOCAL_LENGTH后求F，精度会更高？
         vector<cv::Point2f> un_cur_pts(cur_pts.size()), un_prev_pts(prev_pts.size());
         for (unsigned int i = 0; i < cur_pts.size(); i++)
         {
@@ -334,8 +355,12 @@ void FeatureTracker::rejectWithF()
         }
 
         vector<uchar> status;
+        //SONG: 此处的findFundamentalMat并不是为了求基础矩阵F,而只是求status;
+        // status:具有N个元素的输出数组，在计算过程中没有被舍弃的点，元素被被置为1；否则置为0。
+        // 这个数组只可以在方法RANSAC and LMedS 情况下使用；在其它方法的情况下，status一律被置为1。这个参数是可选参数。
         cv::findFundamentalMat(un_cur_pts, un_prev_pts, cv::FM_RANSAC, F_THRESHOLD, 0.99, status);
         int size_a = cur_pts.size();
+        // 根据status的标志位，清理prev_pts内被舍弃的特征点。
         reduceVector(prev_pts, status);
         reduceVector(cur_pts, status);
         reduceVector(cur_un_pts, status);
@@ -398,6 +423,7 @@ void FeatureTracker::showUndistortion(const string &name)
     // cv::waitKey(0);
 }
 
+//SONG:将像素坐标pts，转为归一化平面坐标un_pts
 vector<cv::Point2f> FeatureTracker::undistortedPts(vector<cv::Point2f> &pts, camodocal::CameraPtr cam)
 {
     vector<cv::Point2f> un_pts;
@@ -516,7 +542,8 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
     //cv::resize(imCur2, imCur2Compress, cv::Size(cols, rows / 2));
 }
 
-
+//SONG:根据3D的predictPts来更新2D predict_pts, 如果predictPts不含有指定的id项，
+//则将对应的prev_pts放入predict_pts。
 void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
 {
     hasPrediction = true;
@@ -531,6 +558,8 @@ void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
         if (itPredict != predictPts.end())
         {
             Eigen::Vector2d tmp_uv;
+            //SONG:EquidistantCamera::spaceToPlane
+            //将3d坐标投影到像素坐标平面。
             m_camera[0]->spaceToPlane(itPredict->second, tmp_uv);
             predict_pts.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));
             predict_pts_debug.push_back(cv::Point2f(tmp_uv.x(), tmp_uv.y()));

@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(vins)
 
 ############ Select Enable SDK or ROS ##############
-option (ENABLE_MYNT_SDK "Enable SDK." ON)
-option (ENABLE_MYNT_ROS "Enable ROS driver." OFF)
+option (ENABLE_MYNT_SDK "Enable SDK." OFF)
+option (ENABLE_MYNT_ROS "Enable ROS driver." ON)
 option (ENABLE_PI  "Enable PI." OFF)
 
 
@@ -123,3 +123,6 @@ target_link_libraries(vins_lib ${CAMERA_MODELS_LIB}  ${MINIGLOG_LIBS} ${OpenCV_L
 
 add_executable(vins_node src/main.cpp)
 target_link_libraries(vins_node vins_lib ${DRIVER_LIBS}) 
+
+# add_executable(mytest src/mytest.cpp)
+# target_link_libraries(mytest vins_lib) 
