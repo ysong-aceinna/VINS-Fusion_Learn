@@ -200,7 +200,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         featureFrame = featureTracker.trackImage(t, _img);
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
-    LOG(INFO) << "featureTracker time: " << featureTrackerTime.toc();
+    // LOG(INFO) << "featureTracker time: " << featureTrackerTime.toc();
 
     //SONG:imgTrack是在输入图像上绘制红、绿、蓝特征点的图像。
     if (SHOW_TRACK)
@@ -211,7 +211,7 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
     
     if(MULTIPLE_THREAD)  
     {     
-        if(inputImageCnt % 1 == 0)    //SONG:若采用多线程，只将偶数帧的featureFrame保存到featureBuf
+        if(inputImageCnt % 2 == 0)    //SONG:若采用多线程，只将偶数帧的featureFrame保存到featureBuf
         {
             mBuf.lock();
             featureBuf.push(make_pair(t, featureFrame));
@@ -353,7 +353,7 @@ void Estimator::processMeasurements()
                 if(!initFirstPoseFlag)
                 {
                     //SONG: 获取IMU的初始姿态，并赋给Rs[0]。
-                    //有个问题：此时需要初始时的body要在静止状态，否则得到的初始姿态是不准的。
+                    //有个问题：基于加速度计计算初始姿态,此时需要初始时的body要在静止状态，否则得到的初始姿态是不准的。
                     initFirstIMUPose(accVector);
                 }
                 for(size_t i = 0; i < accVector.size(); i++)
@@ -1195,7 +1195,7 @@ void Estimator::optimization()
     ceres::Solve(options, &problem, &summary);
     //cout << summary.BriefReport() << endl;
     DLOG(INFO) << "Iterations : " << static_cast<int>(summary.iterations.size());
-    printf("optimization solver costs: %f \n", t_solver.toc());
+    // printf("optimization solver costs: %f \n", t_solver.toc());
 
     double2vector();
     //printf("frame_count: %d \n", frame_count);

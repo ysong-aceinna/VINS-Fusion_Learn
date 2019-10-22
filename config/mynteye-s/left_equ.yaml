@@ -15,6 +15,7 @@ image_height: 480
 #    u0: 3.7265840994819001e+02
 #    v0: 2.3985722080667881e+02
 
+# get below parameters by command: ./samples/_output/bin/tutorials/get_img_params
 projection_parameters:
    k2: -0.03029504397270243
    k3: 0.02456131832180794
@@ -24,3 +25,15 @@ projection_parameters:
    mv: 367.53022271275870025
    u0: 368.07304293979439080
    v0: 230.71178789661894371
+
+# I calibrate s1030 and get below parameters 
+# projection_parameters:
+#    k2: -0.021450950391511535
+#    k3: 0.006053533267031726
+#    k4: -0.011197386243338147
+#    k5: 0.003448332539518069
+#    mu: 365.3358978925933
+#    mv: 364.25806123902123
+#    u0: 367.2546467182224
+#    v0: 230.9342643925742
+   

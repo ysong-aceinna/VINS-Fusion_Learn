@@ -19,6 +19,7 @@ bool FeatureTracker::inBorder(const cv::Point2f &pt)
     return BORDER_SIZE <= img_x && img_x < col - BORDER_SIZE && BORDER_SIZE <= img_y && img_y < row - BORDER_SIZE;
 }
 
+//SONG: 计算两个坐标点的欧氏距离。
 double distance(cv::Point2f pt1, cv::Point2f pt2)
 {
     //printf("pt1: %f %f pt2: %f %f\n", pt1.x, pt1.y, pt2.x, pt2.y);
@@ -27,6 +28,7 @@ double distance(cv::Point2f pt1, cv::Point2f pt2)
     return sqrt(dx * dx + dy * dy);
 }
 
+//SONG: status中的值为0时，删除v中的对应项，否则保留。
 void reduceVector(vector<cv::Point2f> &v, vector<uchar> status)
 {
     int j = 0;
@@ -60,7 +62,8 @@ void FeatureTracker::setMask()
 
     // prefer to keep features that are tracked for long time
     vector<pair<int, pair<cv::Point2f, int>>> cnt_pts_id;
-
+    //cnt_pts_id的第一个key是该特征点的跟踪计数器，第二个key是特征点坐标，value是特征点的id
+    
     for (unsigned int i = 0; i < cur_pts.size(); i++)
         cnt_pts_id.push_back(make_pair(track_cnt[i], make_pair(cur_pts[i], ids[i])));
 
@@ -121,7 +124,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     */
     cur_pts.clear(); //cur_pts保存当前帧的特征点
 
-    if (prev_pts.size() > 0) //如果上一针检测有特征点
+    if (prev_pts.size() > 0) //如果上一帧检测有特征点
     {
         TicToc t_o;
         vector<uchar> status;
@@ -437,6 +440,9 @@ vector<cv::Point2f> FeatureTracker::undistortedPts(vector<cv::Point2f> &pts, cam
     return un_pts;
 }
 
+//SONG:找到前后帧的对应特征点，也就是cur_id_pts和prev_id_pts对应的特征点。
+//如果找到了对应的特征点，则将速度放入pts_velocity
+//如果没找到，
 vector<cv::Point2f> FeatureTracker::ptsVelocity(vector<int> &ids, vector<cv::Point2f> &pts, 
                                             map<int, cv::Point2f> &cur_id_pts, map<int, cv::Point2f> &prev_id_pts)
 {

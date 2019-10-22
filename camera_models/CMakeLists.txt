@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 2.8.3)
 project(camera_models)
 
 ############ Select Enable SDK or ROS ##############
-option (ENABLE_MYNT_SDK "Enable SDK." OFF)
-option (ENABLE_MYNT_ROS "Enable ROS driver." ON)
+option (ENABLE_SDK "Enable SDK." OFF)
+option (ENABLE_ROS "Enable ROS driver." ON)
 option (ENABLE_PI  "Enable PI." OFF)
 ####################################################
 

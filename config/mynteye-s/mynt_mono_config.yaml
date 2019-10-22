@@ -32,10 +32,29 @@ body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
+   # mynt provide.
    data: [-0.0064662, -0.99994994, -0.00763565, 0.00533646,
            0.99997909, -0.00646566, -0.00009558, -0.04302922,
            0.0000462, -0.00763611, 0.99997084, 0.02303124,
            0, 0, 0, 1]
+
+# cam1 to body
+#    data: [-0.014380957242531,  -0.999896408439910,  -0.000598211604804,   0.005604791061486,
+#         0.999770548270838,  -0.014369644367084,  -0.015885794377105,   0.077294310912391,
+#         0.015875546955790,  -0.000826528845951,   0.999873630525177,   0.021792708965133,
+#                         0,                   0,                   0,   1.000000000000000]
+
+#debug
+# data: [-0.0064662, -0.99994994, -0.00763565, 0.00533646,
+#      0.99997909, -0.00646566, -0.00009558, 0.077294310912391,
+#      0.0000462, -0.00763611, 0.99997084, 0.02303124,
+#      0, 0, 0, 1]
+
+# my calibration. cam0 to imu. bad!
+   # data: [-0.00460372, -0.99998908, -0.00080663, 0.00362468,
+   #       0.99998193, -0.00460056, -0.00386923, -0.04383144,
+   #       0.00386548, -0.00082443, 0.99999219, 0.02419698,
+   #       0,          0,          0,          1       ]
 
 #SONG: transition matrix from IMU to body.
 IMU_T_body: !!opencv-matrix
@@ -53,7 +72,7 @@ multiple_thread: 1
 #feature traker paprameters
 max_cnt: 150            # max feature number in feature tracking
 min_dist: 30            # min distance between two features 
-#SONG:结果输出频率
+#SONG:结果输出频率.实际程序中并没有使用到这个变量.
 freq: 10                # frequence (Hz) of publish tracking result. At least 10Hz for good estimation. If set 0, the frequence will be same as raw image 
 F_threshold: 1.0        # ransac threshold (pixel)
 show_track: 1           # publish tracking image as topic
