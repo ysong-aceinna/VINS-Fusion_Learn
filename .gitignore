@@ -17,4 +17,3 @@ camera_chessboard_data.dat
 .DS_Store
 build/
 _build/
-imu_bias.csv

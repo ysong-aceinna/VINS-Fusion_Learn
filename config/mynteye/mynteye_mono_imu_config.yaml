@@ -7,7 +7,7 @@ num_of_cam: 1
 
 imu_topic: "/mynteye/imu/data_raw"
 image0_topic: "/mynteye/left/image_raw"
-output_path: "/home/song/output/"
+output_path: "/home/tong/output/"
 
 cam0_calib: "left_mei.yaml"
 image_width: 752
@@ -17,17 +17,17 @@ image_height: 480
 # Extrinsic parameter between IMU and Camera.
 estimate_extrinsic: 1   # 0  Have an accurate extrinsic parameters. We will trust the following imu^R_cam, imu^T_cam, don't change it.
                         # 1  Have an initial guess about extrinsic parameters. We will optimize around your initial guess.
-                        
-# SONG: body_T_cam0是 left camera to imu 的转换矩阵。
-# ref: https://github.com/slightech/MYNT-EYE-S-SDK/blob/master/tools/writer/config/S1030/imu.params
+
 body_T_cam0: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 4.2812441490024389e-03, -9.9997001507473682e-01, -6.4528985710044385e-03, 5.2583356071589790e-05,
-            9.9996900935734523e-01, 4.2384270612576547e-03, 6.6344601088757426e-03, -4.2174706544162562e-02,
-            -6.6069110351583190e-03, -6.4811023350536514e-03, 9.9995717110239080e-01, 1.9238715201769417e-02, 
-            0., 0., 0., 1. ]
+   data: [ 4.2812441490024389e-03, -9.9997001507473682e-01,
+       -6.4528985710044385e-03, 5.2583356071589790e-05,
+       9.9996900935734523e-01, 4.2384270612576547e-03,
+       6.6344601088757426e-03, -4.2174706544162562e-02,
+       -6.6069110351583190e-03, -6.4811023350536514e-03,
+       9.9995717110239080e-01, 1.9238715201769417e-02, 0., 0., 0., 1. ]
 
 #Multiple thread support
 multiple_thread: 1
@@ -58,5 +58,5 @@ td: 0.0                             # initial value of time offset. unit: s. rea
 
 #loop closure parameters
 load_previous_pose_graph: 0        # load and reuse previous pose graph; load from 'pose_graph_save_path'
-pose_graph_save_path: "/home/song/output/pose_graph/" # save and load path
+pose_graph_save_path: "/home/tony-ws1/output/pose_graph/" # save and load path
 save_image: 1                   # save image in pose graph for visualization prupose; you can close this function by setting 0 
