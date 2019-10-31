@@ -32,11 +32,12 @@ Estimator::Estimator(): f_manager{Rs}
 
     //record accel and gyro bias evaluated by VINS.
     // m_fout_imu_bias = ofstream("/home/pi/project/VINS-Fusion_Learn/imu_bias.csv", ios::app);
-    // if (!m_fout_imu_bias)
-    // {
-    //     LOG(ERROR) << "open file failed! Exit ...";
-    //     exit(EXIT_FAILURE);
-    // }
+    m_fout_imu_bias = ofstream("/home/song/debug_vins/imu_bias.csv", ios::app);
+    if (!m_fout_imu_bias)
+    {
+        LOG(ERROR) << "open file failed! Exit ...";
+        exit(EXIT_FAILURE);
+    }
 }
 
 Estimator::~Estimator()
@@ -191,7 +192,16 @@ void Estimator::changeSensorType(int use_imu, int use_stereo)
 void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
 {
     inputImageCnt++;
-    // if(inputImageCnt % 2 == 0) return;
+
+    //为使initFirstIMUPose中有足够的imu数据计算初始姿态,应跳过初始的jump_frames_cnt帧图像.
+    //initFirstIMUPose中IMU数据个数约为: 
+    // 1. 若jump_frames_cnt为奇数: (jump_frames_cnt+1) *(IMU频率/图像频率)
+    // 2. 若jump_frames_cnt为偶数, jump_frames_cnt*(IMU频率/图像频率)
+    // 举例: 当jump_frames_cnt为2时,如过image为20hz,对应20个imu数据;
+    //      当jump_frames_cnt为2时,如过image为10hz,对应40个imu数据;
+    const int jump_frames_cnt = 2; 
+    if(inputImageCnt < jump_frames_cnt ) return;
+
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
     TicToc featureTrackerTime;
 
@@ -292,7 +302,7 @@ bool Estimator::getIMUInterval(double t0, double t1, vector<pair<double, Eigen::
         }
 
         //SONG: 上边的while循环已经把[t0, t1]间的数据都填充进accVector和gyrVector了，
-        //为啥还要再填充一次？而且存入vector后也没有pop掉？我认为此处是bug，下边两行应该被注释掉。
+        //下边两行的目的是,临界时间点的一帧IMU数据重用.
         accVector.push_back(accBuf.front()); 
         gyrVector.push_back(gyrBuf.front());
     }
@@ -385,6 +395,7 @@ void Estimator::processMeasurements()
 }
 
 //SONG: 获取IMU的初始姿态，并赋给Rs[0]。
+//这里要测试一下,如果不是在车辆静止状态,而是在有家减速的汽车行驶过程中得到的初始姿态,对后边的最终结果有什么影响.
 void Estimator::initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVector)
 {
     printf("init first imu pose\n");
@@ -397,10 +408,10 @@ void Estimator::initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVecto
         averAcc = averAcc + accVector[i].second;
     }
     averAcc = averAcc / n; //SONG:求accVector中n组数据的均值。
-    printf("averge acc %f %f %f\n", averAcc.x(), averAcc.y(), averAcc.z());
+    printf("averge acc %f %f %f, n:%d\n", averAcc.x(), averAcc.y(), averAcc.z(), n);
     Matrix3d R0 = Utility::g2R(averAcc); //SONG: R0是以余弦矩阵表示的初始姿态。
     double yaw = Utility::R2ypr(R0).x();
-    R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0;
+    R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0; //经调试,yaw一直是0,对头.
     Rs[0] = R0;
     cout << "init R0 " << endl << Rs[0] << endl;
     //Vs[0] = Vector3d(5, 0, 0);
@@ -457,6 +468,7 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
 }
 
 /*
+对应VINS-MONO论文中的图7.
 为了处理一些悬停的case,引入了一个two-way marginalization, 
 简单来说就是:如果倒数第二帧是关键帧, 则将最旧的pose移出sliding window, 
 将最旧帧相关联的视觉和惯性数据边缘化掉，也就是MARGIN_OLD，
@@ -650,7 +662,7 @@ bool Estimator::initialStructure()
             Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
             sum_g += tmp_g;
         }
-        Vector3d aver_g;
+        Vector3d aver_g; //计算均值
         aver_g = sum_g * 1.0 / ((int)all_image_frame.size() - 1);
         double var = 0;
         for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
@@ -662,7 +674,7 @@ bool Estimator::initialStructure()
         }
         var = sqrt(var / ((int)all_image_frame.size() - 1));
         // LOG(WARNING) << "IMU variation " << var << "!";
-        if(var < 0.25)
+        if(var < 0.25)//根据标准差判断是否移动幅度较小.
         {
             LOG(INFO) << "IMU excitation not enouth!";
             //return false;
@@ -1677,10 +1689,10 @@ void Estimator::updateLatestStates()
     }
     mBuf.unlock();
 
-    // cout << "latest_time:" << fixed << setprecision(3) << latest_time << "(s)" << endl;
+    cout << "latest_time:" << fixed << setprecision(3) << latest_time << "(s)" << endl;
     // printf("t: %f\n", latest_time);
-    // cout << latest_Ba.transpose() << "," << latest_Bg.transpose() << endl;
-    // saveIMUBias(latest_time, latest_Ba, latest_Bg);
+    cout << latest_Ba.transpose() << "," << latest_Bg.transpose() << endl;
+    saveIMUBias(latest_time, latest_Ba, latest_Bg);
 }
 
 //SONG: 保存accel和gyro的bias到文件.

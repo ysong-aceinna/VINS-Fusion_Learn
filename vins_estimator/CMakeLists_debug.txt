@@ -9,7 +9,7 @@ option (ENABLE_PI  "Enable PI." OFF)
 
 ############## Select Release or Debug ################
 # target c++17 to solve eigen issues. ref to "http://eigen.tuxfamily.org/dox-devel/group__TopicUnalignedArrayAssert.html"
-set(COMPILE_TYPE Release)
+set(COMPILE_TYPE Debug)
 if(COMPILE_TYPE STREQUAL "Release")
   set(CMAKE_BUILD_TYPE "Release")
   set(CMAKE_CXX_FLAGS "-std=c++17 ")
@@ -103,34 +103,52 @@ endif()
 ####################################################
 
 ############### Generate lib and exe ###############
-add_library(vins_lib
-    ${BUILD_SHARED}
-    src/estimator/parameters.cpp
-    src/estimator/estimator.cpp
-    src/estimator/feature_manager.cpp
-    src/factor/pose_local_parameterization.cpp
-    src/factor/projectionTwoFrameOneCamFactor.cpp
-    src/factor/projectionTwoFrameTwoCamFactor.cpp
-    src/factor/projectionOneFrameTwoCamFactor.cpp
-    src/factor/marginalization_factor.cpp
-    src/utility/utility.cpp
-    ${DRIVER_SOURCES}
-    src/initial/solve_5pts.cpp
-    src/initial/initial_aligment.cpp
-    src/initial/initial_sfm.cpp
-    src/initial/initial_ex_rotation.cpp
-    src/featureTracker/feature_tracker.cpp)
-target_link_libraries(vins_lib ${CAMERA_MODELS_LIB}  ${DRIVER_LIBS} ${MINIGLOG_LIBS} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+# add_library(vins_lib
+#     ${BUILD_SHARED}
+#     src/estimator/parameters.cpp
+#     src/estimator/estimator.cpp
+#     src/estimator/feature_manager.cpp
+#     src/factor/pose_local_parameterization.cpp
+#     src/factor/projectionTwoFrameOneCamFactor.cpp
+#     src/factor/projectionTwoFrameTwoCamFactor.cpp
+#     src/factor/projectionOneFrameTwoCamFactor.cpp
+#     src/factor/marginalization_factor.cpp
+#     src/utility/utility.cpp
+#     ${DRIVER_SOURCES}
+#     src/initial/solve_5pts.cpp
+#     src/initial/initial_aligment.cpp
+#     src/initial/initial_sfm.cpp
+#     src/initial/initial_ex_rotation.cpp
+#     src/featureTracker/feature_tracker.cpp)
+# target_link_libraries(vins_lib ${CAMERA_MODELS_LIB}  ${DRIVER_LIBS} ${MINIGLOG_LIBS} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
-add_executable(vins_node src/main.cpp)
-target_link_libraries(vins_node vins_lib ) 
+
+set(ALL_SOURCES
+  ${DRIVER_SOURCES}
+  src/estimator/parameters.cpp
+  src/estimator/estimator.cpp
+  src/estimator/feature_manager.cpp
+  src/factor/pose_local_parameterization.cpp
+  src/factor/projectionTwoFrameOneCamFactor.cpp
+  src/factor/projectionTwoFrameTwoCamFactor.cpp
+  src/factor/projectionOneFrameTwoCamFactor.cpp
+  src/factor/marginalization_factor.cpp
+  src/utility/utility.cpp
+  src/initial/solve_5pts.cpp
+  src/initial/initial_aligment.cpp
+  src/initial/initial_sfm.cpp
+  src/initial/initial_ex_rotation.cpp
+  src/featureTracker/feature_tracker.cpp)
+
+add_executable(vins_node src/main.cpp  ${ALL_SOURCES})
+target_link_libraries(vins_node ${CAMERA_MODELS_LIB}  ${DRIVER_LIBS} ${MINIGLOG_LIBS} ${OpenCV_LIBS} ${CERES_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 
 # add_executable(mytest src/mytest.cpp)
 # target_link_libraries(mytest vins_lib) 
 
-add_executable(kitti_odom_test src/KITTIOdomTest.cpp src/utility/visualization.cpp)
-target_link_libraries(kitti_odom_test vins_lib) 
+# add_executable(kitti_odom_test src/KITTIOdomTest.cpp src/utility/visualization.cpp)
+# target_link_libraries(kitti_odom_test vins_lib) 
 
-add_executable(kitti_gps_test src/KITTIGPSTest.cpp src/utility/visualization.cpp)
-target_link_libraries(kitti_gps_test vins_lib) 
+# add_executable(kitti_gps_test src/KITTIGPSTest.cpp src/utility/visualization.cpp)
+# target_link_libraries(kitti_gps_test vins_lib) 
 

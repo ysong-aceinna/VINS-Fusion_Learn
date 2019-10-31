@@ -101,6 +101,7 @@ double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2)
 
 /*
 SONG: map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame
+可参考FeaturePerFrame的定义.
 第一个int为feature的id，vector里面的int为相机id（0为左边的camera0，1为右边的camera1），
 后面的Eigen::Matrix类型里面包含该特征点在该相机下的信息，
 分别为:归一化平面坐标（x,y,z=1），像素坐标（u,v），像素移动速度（v_x,v_y），共七维。
@@ -206,6 +207,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             //n_pts为输出角点vector；
             //MAX_CNT - cur_pts.size():最大角点数目
             //如果在其周围MIN_DIST范围内存在其他更强角点，则将此角点删除
+            //goodFeaturesToTrack默认检测shi-tomasi角点
             cv::goodFeaturesToTrack(cur_img, n_pts, MAX_CNT - cur_pts.size(), 0.01, MIN_DIST, mask);
         }
         else
@@ -389,9 +391,13 @@ void FeatureTracker::readIntrinsicParameter(const vector<string> &calib_file)
         stereo_cam = 1;
 }
 
+/*
+SONG:这个函数目前没有被调用.
+功能是:根据畸变参数,将畸变图像转为非畸变图像.
+*/
 void FeatureTracker::showUndistortion(const string &name)
 {
-    cv::Mat undistortedImg(row + 600, col + 600, CV_8UC1, cv::Scalar(0));
+    cv::Mat undistortedImg(row + 600, col + 600, CV_8UC1, cv::Scalar(0)); //校准后未畸变的图像尺寸会变大,所以往外扩600像素,其实600不一定够,需要看原始图像尺寸和畸变程度.
     vector<Eigen::Vector2d> distortedp, undistortedp;
     for (int i = 0; i < col; i++)
         for (int j = 0; j < row; j++)

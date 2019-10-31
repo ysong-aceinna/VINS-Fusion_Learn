@@ -36,6 +36,8 @@ class IntegrationBase
         noise.block<3, 3>(15, 15) =  (GYR_W * GYR_W) * Eigen::Matrix3d::Identity();
     }
 
+    //SONG: 如果IMU数值改变很小,则按照附录A 26式的预积分项做propagate,否则,做repropagate.
+    //这样做的好处是,不必每次都重复propagate,可以大大降低计算开销. 
     void push_back(double dt, const Eigen::Vector3d &acc, const Eigen::Vector3d &gyr)
     {
         dt_buf.push_back(dt);

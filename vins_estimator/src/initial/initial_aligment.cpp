@@ -35,10 +35,11 @@ void solveGyroscopeBias(map<double, ImageFrame> &all_image_frame, Vector3d* Bgs)
     }
     delta_bg = A.ldlt().solve(b);
     LOG(WARNING) << "gyroscope bias initial calibration " << delta_bg.transpose();
-
+    //SONG: 因为求解出的Bias是变化量,所以要累加
     for (int i = 0; i <= WINDOW_SIZE; i++)
         Bgs[i] += delta_bg;
-
+    
+    //SONG: 利用新的Bias重新repropagate
     for (frame_i = all_image_frame.begin(); next(frame_i) != all_image_frame.end( ); frame_i++)
     {
         frame_j = next(frame_i);
