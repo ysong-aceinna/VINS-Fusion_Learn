@@ -86,8 +86,15 @@ class Estimator
     bool IMUAvailable(double t);
     void initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVector);
 
-    void saveIMUBias(double time, const Eigen::Vector3d accel_bias, const Eigen::Vector3d gyro_bias);
+    void saveIMUBias(double time, const Eigen::Vector3d accel_bias, const Eigen::Vector3d gyro_bias, 
+                    const Eigen::Vector3d position, const Eigen::Vector3d velocity);
+
+    void saveLinearAcc(double time, const Eigen::Vector3d accel);
+    std::tm* getCurTime();
+    bool CreateLogFiles();
+
     ofstream m_fout_imu_bias;
+    ofstream m_fout_linear_acc;
 
     enum SolverFlag
     {

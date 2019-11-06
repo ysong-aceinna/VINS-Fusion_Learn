@@ -53,15 +53,15 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
 {
     DLOG(INFO) << "input feature: " << (int)image.size();
     DLOG(INFO) << "num of feature: " << getFeatureCount();
-    double parallax_sum = 0;
-    int parallax_num = 0;
-    last_track_num = 0;
+    double parallax_sum = 0;//所有特征点视差总和
+    int parallax_num = 0;    // 满足某些条件的特征点个数
+    last_track_num = 0;//被跟踪点的个数
     last_average_parallax = 0;
     new_feature_num = 0;
     long_track_num = 0;
     for (auto &id_pts : image)
     {
-        FeaturePerFrame f_per_fra(id_pts.second[0].second, td);
+        FeaturePerFrame f_per_fra(id_pts.second[0].second, td);//特征点管理器，存储特征点格式：首先按照特征点ID，一个一个存储，每个ID会包含其在不同帧上的位置
         assert(id_pts.second[0].first == 0);
         if(id_pts.second.size() == 2)
         {
@@ -69,7 +69,7 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
             assert(id_pts.second[1].first == 1);
         }
 
-        int feature_id = id_pts.first;
+        int feature_id = id_pts.first;// find_if 函数，找到一个interator使第三个仿函数参数为真
         auto it = find_if(feature.begin(), feature.end(), [feature_id](const FeaturePerId &it)
                           {
             return it.feature_id == feature_id;
@@ -77,12 +77,13 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
 
         if (it == feature.end())
         {
-            feature.push_back(FeaturePerId(feature_id, frame_count));
+            feature.push_back(FeaturePerId(feature_id, frame_count)); //如果没有找到此ID，就在管理器中增加此特征点
             feature.back().feature_per_frame.push_back(f_per_fra);
             new_feature_num++;
         }
         else if (it->feature_id == feature_id)
         {
+            //如果找到了相同ID特征点，就在其FeaturePerFrame内增加此特征点在此帧的位置以及其他信息，然后增加last_track_num，说明此帧有多少个相同特征点被跟踪到
             it->feature_per_frame.push_back(f_per_fra);
             last_track_num++;
             if( it-> feature_per_frame.size() >= 4)
@@ -97,6 +98,7 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
 
     for (auto &it_per_id : feature)
     {
+        //计算能被当前帧和之前两帧共同看到的特征点视差
         if (it_per_id.start_frame <= frame_count - 2 &&
             it_per_id.start_frame + int(it_per_id.feature_per_frame.size()) - 1 >= frame_count - 1)
         {
@@ -556,7 +558,7 @@ double FeatureManager::compensatedParallax2(const FeaturePerId &it_per_id, int f
     double u_i_comp = p_i_comp(0) / dep_i_comp;
     double v_i_comp = p_i_comp(1) / dep_i_comp;
     double du_comp = u_i_comp - u_j, dv_comp = v_i_comp - v_j;
-
+    //计算斜边大小
     ans = max(ans, sqrt(min(du * du + dv * dv, du_comp * du_comp + dv_comp * dv_comp)));
 
     return ans;

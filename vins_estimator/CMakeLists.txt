@@ -125,9 +125,6 @@ target_link_libraries(vins_lib ${CAMERA_MODELS_LIB}  ${DRIVER_LIBS} ${MINIGLOG_L
 add_executable(vins_node src/main.cpp)
 target_link_libraries(vins_node vins_lib ) 
 
-# add_executable(mytest src/mytest.cpp)
-# target_link_libraries(mytest vins_lib) 
-
 add_executable(kitti_odom_test src/KITTIOdomTest.cpp src/utility/visualization.cpp)
 target_link_libraries(kitti_odom_test vins_lib) 
 

@@ -30,12 +30,8 @@ Estimator::Estimator(): f_manager{Rs}
     initThreadFlag = false;
     clearState();
 
-    //record accel and gyro bias evaluated by VINS.
-    // m_fout_imu_bias = ofstream("/home/pi/project/VINS-Fusion_Learn/imu_bias.csv", ios::app);
-    m_fout_imu_bias = ofstream("/home/song/debug_vins/imu_bias.csv", ios::app);
-    if (!m_fout_imu_bias)
+    if(!CreateLogFiles())
     {
-        LOG(ERROR) << "open file failed! Exit ...";
         exit(EXIT_FAILURE);
     }
 }
@@ -48,7 +44,8 @@ Estimator::~Estimator()
         printf("join thread \n");
     }
 
-    m_fout_imu_bias.close();    
+    m_fout_imu_bias.close();
+    m_fout_linear_acc.close();
 }
 
 void Estimator::clearState()
@@ -604,7 +601,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         }
 
     }
-    else
+    else//初始化成功后的处理
     {
         TicToc t_solve;
         if(!USE_IMU)
@@ -766,6 +763,9 @@ bool Estimator::initialStructure()
             }
         }
         cv::Mat K = (cv::Mat_<double>(3, 3) << 1, 0, 0, 0, 1, 0, 0, 0, 1);     
+        // cv::Mat K = (cv::Mat_<double>(3, 3) << 367.52449489660699555, 0, 368.07304293979439080, 0, 367.53022271275870025, 230.71178789661894371, 0, 0, 1);     
+        // cv::Mat DD = (cv::Mat_<double>(4, 1) << -0.03029504397270243, 0.02456131832180794, -0.03688066102662716, 0.01626083592134776);     
+
         if(pts_3_vector.size() < 6)
         {
             cout << "pts_3_vector size " << pts_3_vector.size() << endl;
@@ -774,6 +774,7 @@ bool Estimator::initialStructure()
         }
         //SONG: 求解PnP, 这里内参矩阵K用单位阵，是不是有问题?
         if (! cv::solvePnP(pts_3_vector, pts_2_vector, K, D, rvec, t, 1))
+        // if (! cv::solvePnP(pts_3_vector, pts_2_vector, K, DD, rvec, t, false, cv::SOLVEPNP_EPNP))
         {
             DLOG(INFO) << "solve pnp fail!";
             return false;
@@ -1663,6 +1664,7 @@ void Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Ei
     latest_V = latest_V + dt * un_acc;
     latest_acc_0 = linear_acceleration;
     latest_gyr_0 = angular_velocity;
+    saveLinearAcc(t, un_acc); //save linear accel.
 }
 
 void Estimator::updateLatestStates()
@@ -1683,30 +1685,86 @@ void Estimator::updateLatestStates()
         double t = tmp_accBuf.front().first;
         Eigen::Vector3d acc = tmp_accBuf.front().second;
         Eigen::Vector3d gyr = tmp_gyrBuf.front().second;
-        fastPredictIMU(t, acc, gyr);
+        // fastPredictIMU(t, acc, gyr);
         tmp_accBuf.pop();
         tmp_gyrBuf.pop();
     }
     mBuf.unlock();
 
-    cout << "latest_time:" << fixed << setprecision(3) << latest_time << "(s)" << endl;
-    // printf("t: %f\n", latest_time);
-    cout << latest_Ba.transpose() << "," << latest_Bg.transpose() << endl;
-    saveIMUBias(latest_time, latest_Ba, latest_Bg);
+    // cout << "latest_time:" << fixed << setprecision(3) << latest_time << "(s)" << endl;
+    // cout << latest_Ba.transpose() << "," << latest_Bg.transpose() << endl;
+    saveIMUBias(latest_time, latest_Ba, latest_Bg, latest_P, latest_V);
 }
 
 //SONG: 保存accel和gyro的bias到文件.
 //time IS header.stamp.toSec();
-void Estimator::saveIMUBias(double time, const Eigen::Vector3d accel_bias, const Eigen::Vector3d gyro_bias)
+void Estimator::saveIMUBias(double time, const Eigen::Vector3d accel_bias, const Eigen::Vector3d gyro_bias,
+                            const Eigen::Vector3d position, const Eigen::Vector3d velocity)
 {
-    m_fout_imu_bias.setf(ios::fixed, ios::floatfield); // ios_base::fixed:设置cout为定点输出格式; ios_base::floatfield:设置输出时按浮点格式，小数点后有6位数字
+    const float R2D = 180/M_PI;
     // m_fout_imu_bias.precision(0);
     m_fout_imu_bias << time /** 1e9 */ << ",";
     // m_fout_imu_bias.precision(5);
     m_fout_imu_bias << accel_bias.x() << ","
                   << accel_bias.y() << ","
                   << accel_bias.z() << ","
-                  << gyro_bias.x()  << ","
-                  << gyro_bias.y()  << ","
-                  << gyro_bias.z()  << endl;
+                  << gyro_bias.x() * R2D << ","
+                  << gyro_bias.y() * R2D << ","
+                  << gyro_bias.z() * R2D << ","
+                  << position.x()  << ","
+                  << position.y()  << ","
+                  << position.z()  << ","
+                  << velocity.x()  << ","
+                  << velocity.y()  << ","
+                  << velocity.z()  << endl;
+}
+
+void Estimator::saveLinearAcc(double time, const Eigen::Vector3d accel)
+{
+    m_fout_linear_acc << time << "," << accel.x() << "," << accel.y() << "," << accel.z() << endl;    
+}
+
+std::tm* Estimator::getCurTime()
+{
+    std::chrono::time_point<std::chrono::system_clock,std::chrono::milliseconds> tp = std::chrono::time_point_cast<std::chrono::milliseconds>(std::chrono::system_clock::now());
+    auto tmp=std::chrono::duration_cast<std::chrono::milliseconds>(tp.time_since_epoch());
+    std::time_t timestamp = tmp.count();
+	
+    int64 milli = timestamp + (int64)8*60*60*1000;
+    auto mTime = std::chrono::milliseconds(milli);
+    auto tp_=std::chrono::time_point<std::chrono::system_clock,std::chrono::milliseconds>(mTime);
+    auto tt = std::chrono::system_clock::to_time_t(tp_);
+    std::tm* now = std::gmtime(&tt);
+    return now;
+}
+
+bool Estimator::CreateLogFiles()
+{
+    //record accel and gyro bias evaluated by VINS.
+    std::tm* now = getCurTime();
+    char time_stamp_ch[32] = {0};
+    sprintf(time_stamp_ch,"%4d%02d%02d_%02d%02d%02d",now->tm_year+1900, now->tm_mon+1,now->tm_mday,now->tm_hour,now->tm_min,now->tm_sec);
+
+    std::string file_name(time_stamp_ch, time_stamp_ch + strlen(time_stamp_ch));
+    file_name = OUTPUT_FOLDER + "/" + "imu_bias_" + file_name + ".csv";
+    m_fout_imu_bias = ofstream(file_name, ios::app);
+    m_fout_imu_bias.setf(ios::fixed, ios::floatfield); // ios_base::fixed:设置cout为定点输出格式; ios_base::floatfield:设置输出时按浮点格式，小数点后有6位数字
+    if (!m_fout_imu_bias)
+    {
+        LOG(ERROR) << "open file " << file_name << " failed!";
+        return false;
+    }
+
+    file_name.clear();
+    file_name.assign(time_stamp_ch, time_stamp_ch + strlen(time_stamp_ch));
+    file_name = OUTPUT_FOLDER + "/" + "linear_acc_" + file_name + ".csv";
+    m_fout_linear_acc = ofstream(file_name, ios::app);
+    m_fout_linear_acc.setf(ios::fixed, ios::floatfield);
+    if (!m_fout_linear_acc)
+    {
+        LOG(ERROR) << "open file " << file_name << " failed!";
+        return false;
+    }
+
+    return true;
 }
