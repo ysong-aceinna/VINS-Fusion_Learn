@@ -248,7 +248,9 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
 
     //SONG:IMU快速计分求当前的速度和位置。
     // 我觉得这里的fastPredictIMU可以删掉，因为在processImage中又被重复调用了。
-    fastPredictIMU(t, linearAcceleration, angularVelocity);
+    Eigen::Vector3d un_acc = fastPredictIMU(t, linearAcceleration, angularVelocity);
+    saveLinearAcc(t, un_acc); //save linear accel.
+
     if (solver_flag == NON_LINEAR) //除了在image到来时得到准确位姿外，还可以在相邻两图像帧间根据IMU递推最新的位姿，和IMU同频率。
     {
         m_pvisual->ShowLatestOdometry(latest_P, latest_Q, latest_V, t);
@@ -1651,7 +1653,7 @@ void Estimator::outliersRejection(set<int> &removeIndex)
 }
 
 //SONG:IMU快速计分求当前的速度和位置。
-void Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity)
+Eigen::Vector3d Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Eigen::Vector3d angular_velocity)
 {
     double dt = t - latest_time; //SONG:Delta t
     latest_time = t;
@@ -1664,7 +1666,7 @@ void Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_acceleration, Ei
     latest_V = latest_V + dt * un_acc;
     latest_acc_0 = linear_acceleration;
     latest_gyr_0 = angular_velocity;
-    saveLinearAcc(t, un_acc); //save linear accel.
+    return un_acc;
 }
 
 void Estimator::updateLatestStates()
@@ -1685,7 +1687,7 @@ void Estimator::updateLatestStates()
         double t = tmp_accBuf.front().first;
         Eigen::Vector3d acc = tmp_accBuf.front().second;
         Eigen::Vector3d gyr = tmp_gyrBuf.front().second;
-        // fastPredictIMU(t, acc, gyr);
+        fastPredictIMU(t, acc, gyr);
         tmp_accBuf.pop();
         tmp_gyrBuf.pop();
     }

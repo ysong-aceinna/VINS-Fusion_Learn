@@ -4,7 +4,6 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
         - /Grid1
         - /Grid1/Offset1
         - /Axes1
@@ -46,7 +45,7 @@ Visualization Manager:
   Class: ""
   Displays:
     - Alpha: 0.800000011920929
-      Cell Size: 5
+      Cell Size: 10
       Class: rviz/Grid
       Color: 160; 160; 164
       Enabled: true
@@ -353,15 +352,15 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/ThirdPersonFollower
-      Distance: 173.26510620117188
+      Distance: 292.9854736328125
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -32.83148193359375
-        Y: 27.862472534179688
+        X: -13.313741683959961
+        Y: -22.81844711303711
         Z: 0
       Focal Shape Fixed Size: false
       Focal Shape Size: 0.05000000074505806
@@ -371,7 +370,7 @@ Visualization Manager:
       Pitch: 1.5697963237762451
       Target Frame: world
       Value: ThirdPersonFollower (rviz)
-      Yaw: 3.1622140407562256
+      Yaw: 5.067227363586426
     Saved: ~
 Window Geometry:
   Displays:
@@ -389,8 +388,8 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1440
-  X: 240
-  Y: 0
+  X: 190
+  Y: 44
   loop_match_Image:
     collapsed: false
   track_image:
