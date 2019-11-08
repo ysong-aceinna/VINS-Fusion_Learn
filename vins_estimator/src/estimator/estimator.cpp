@@ -246,14 +246,15 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
     //printf("input imu with time %f \n", t);
     mBuf.unlock();
 
-    //SONG:IMU快速计分求当前的速度和位置。
-    // 我觉得这里的fastPredictIMU可以删掉，因为在processImage中又被重复调用了。
-    Eigen::Vector3d un_acc = fastPredictIMU(t, linearAcceleration, angularVelocity);
-    saveLinearAcc(t, un_acc); //save linear accel.
-
     if (solver_flag == NON_LINEAR) //除了在image到来时得到准确位姿外，还可以在相邻两图像帧间根据IMU递推最新的位姿，和IMU同频率。
     {
+        mPropagate.lock();
+        //SONG:IMU快速计分求当前的速度和位置。
+        // 我觉得这里的fastPredictIMU可以删掉，因为在processImage中又被重复调用了。
+        Eigen::Vector3d un_acc = fastPredictIMU(t, linearAcceleration, angularVelocity);
+        saveLinearAcc(t, un_acc); //save linear accel.
         m_pvisual->ShowLatestOdometry(latest_P, latest_Q, latest_V, t);
+        mPropagate.unlock();
     }
 }
 
@@ -538,6 +539,8 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
                 }
                 if(result)
                 {
+                    optimization();
+                    updateLatestStates();
                     solver_flag = NON_LINEAR;
                     optimization();
                     slideWindow();
@@ -568,8 +571,9 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
                 {
                     pre_integrations[i]->repropagate(Vector3d::Zero(), Bgs[i]);
                 }
-                solver_flag = NON_LINEAR;
                 optimization();
+                updateLatestStates();
+                solver_flag = NON_LINEAR;
                 slideWindow();
                 LOG(INFO) << "Initialization finish!";
             }
@@ -584,6 +588,8 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 
             if(frame_count == WINDOW_SIZE)
             {
+                optimization();
+                updateLatestStates();
                 solver_flag = NON_LINEAR;
                 slideWindow();
                 LOG(INFO) << "Initialization finish!";
@@ -1671,6 +1677,7 @@ Eigen::Vector3d Estimator::fastPredictIMU(double t, Eigen::Vector3d linear_accel
 
 void Estimator::updateLatestStates()
 {
+    mPropagate.lock();
     latest_time = Headers[frame_count] + td;
     latest_P = Ps[frame_count];
     latest_Q = Rs[frame_count];
@@ -1682,6 +1689,7 @@ void Estimator::updateLatestStates()
     mBuf.lock();
     queue<pair<double, Eigen::Vector3d>> tmp_accBuf = accBuf;
     queue<pair<double, Eigen::Vector3d>> tmp_gyrBuf = gyrBuf;
+    mBuf.unlock();
     while(!tmp_accBuf.empty())
     {
         double t = tmp_accBuf.front().first;
@@ -1691,7 +1699,7 @@ void Estimator::updateLatestStates()
         tmp_accBuf.pop();
         tmp_gyrBuf.pop();
     }
-    mBuf.unlock();
+    mPropagate.unlock();
 
     // cout << "latest_time:" << fixed << setprecision(3) << latest_time << "(s)" << endl;
     // cout << latest_Ba.transpose() << "," << latest_Bg.transpose() << endl;
