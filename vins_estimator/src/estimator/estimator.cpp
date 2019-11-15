@@ -529,7 +529,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         // monocular + IMU initilization
         if (!STEREO && USE_IMU)
         {
-            if (frame_count == WINDOW_SIZE)
+            if (frame_count == WINDOW_SIZE) //窗口填满后,开始SFM
             {
                 bool result = false;
                 if(ESTIMATE_EXTRINSIC != 2 && (header - initial_timestamp) > 0.1)
@@ -667,7 +667,7 @@ bool Estimator::initialStructure()
             Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
             sum_g += tmp_g;
         }
-        Vector3d aver_g; //计算均值
+        Vector3d aver_g; //计算线性加速度的均值
         aver_g = sum_g * 1.0 / ((int)all_image_frame.size() - 1);
         double var = 0;
         for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
@@ -677,6 +677,7 @@ bool Estimator::initialStructure()
             var += (tmp_g - aver_g).transpose() * (tmp_g - aver_g);
             //cout << "frame g " << tmp_g.transpose() << endl;
         }
+        //计算线性加速度的标准差
         var = sqrt(var / ((int)all_image_frame.size() - 1));
         // LOG(WARNING) << "IMU variation " << var << "!";
         if(var < 0.25)//根据标准差判断是否移动幅度较小.
@@ -1002,7 +1003,7 @@ void Estimator::double2vector()
                 Bgs[i] = Vector3d(para_SpeedBias[i][6],
                                   para_SpeedBias[i][7],
                                   para_SpeedBias[i][8]);
-            
+
         }
     }
     else

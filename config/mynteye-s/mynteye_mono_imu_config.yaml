@@ -114,8 +114,21 @@ IMU_T_body: !!opencv-matrix
    rows: 4
    cols: 4
    dt: d
-   data: [ 0,  0, 1, 0,
-           0, -1, 0, 0,
+   # Axis-x forward
+   # data: [ 0,  0, 1, 0,
+   #         0, -1, 0, 0,
+   #         1,  0, 0, 0,
+   #         0,  0, 0, 1]
+
+   # Axis-y forward, camera face left
+   # data: [ 0,  1, 0, 0,
+   #         0,  0, 1, 0,
+   #         1,  0, 0, 0,
+   #         0,  0, 0, 1]
+
+   # Axis-y backward, camer face right
+   data: [ 0,  -1, 0, 0,
+           0,  0, -1, 0,
            1,  0, 0, 0,
            0,  0, 0, 1]
 
