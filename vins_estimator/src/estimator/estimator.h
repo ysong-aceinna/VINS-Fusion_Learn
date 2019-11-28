@@ -165,7 +165,7 @@ class Estimator
     double initial_timestamp;
 
 
-    double para_Pose[WINDOW_SIZE + 1][SIZE_POSE];
+    double para_Pose[WINDOW_SIZE + 1][SIZE_POSE]; //pos 3维度，四元数姿态4维度， 共7个维度。
     double para_SpeedBias[WINDOW_SIZE + 1][SIZE_SPEEDBIAS];
     double para_Feature[NUM_OF_F][SIZE_FEATURE];
     double para_Ex_Pose[2][SIZE_POSE];

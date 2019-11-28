@@ -20,3 +20,4 @@ class PoseLocalParameterization : public ceres::LocalParameterization
     virtual int GlobalSize() const { return 7; };
     virtual int LocalSize() const { return 6; };
 };
+//可参考对LocalParameterization的讲解。https://blog.csdn.net/sanshixionglueluelue/article/details/81037791

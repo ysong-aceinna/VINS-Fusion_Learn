@@ -1102,19 +1102,22 @@ void Estimator::optimization()
     //loss_function = new ceres::CauchyLoss(1.0 / FOCAL_LENGTH);
     //ceres::LossFunction* loss_function = new ceres::HuberLoss(1.0);
     for (int i = 0; i < frame_count + 1; i++)
-    {
+    {//很奇怪，new了这么多，却没有delete，为什么不会内存泄漏？
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        //添加参数块，包括pose和q，共7个维度。
         problem.AddParameterBlock(para_Pose[i], SIZE_POSE, local_parameterization);
-        if(USE_IMU)
+        if(USE_IMU) //包括3维Vel, 3维accel和3维gyro的bias, 共9个维度。
             problem.AddParameterBlock(para_SpeedBias[i], SIZE_SPEEDBIAS);
     }
-    if(!USE_IMU)
+    if(!USE_IMU)//在优化过程中保持指定的参数块para_Pose[0]不变。
         problem.SetParameterBlockConstant(para_Pose[0]);
 
     for (int i = 0; i < NUM_OF_CAM; i++)
     {
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
+        //将外参R,T 添加到参数块。
         problem.AddParameterBlock(para_Ex_Pose[i], SIZE_POSE, local_parameterization);
+        //Vs[0].norm() 是求Vs[0]的范数，即sqrt(v_x*v_x + v_y*v_y + v_z*v_z),即判断和速是否大于0.2 m/s
         if ((ESTIMATE_EXTRINSIC && frame_count == WINDOW_SIZE && Vs[0].norm() > 0.2) || openExEstimation)
         {
             // LOG(INFO) << "estimate extinsic param";
@@ -1123,11 +1126,13 @@ void Estimator::optimization()
         else
         {
             //LOG(INFO) << "fix extinsic param";
+            //如果不需要估计, 则para_Ex_Pose[i]不变。
             problem.SetParameterBlockConstant(para_Ex_Pose[i]);
         }
     }
+    //para_Td是啥？
     problem.AddParameterBlock(para_Td[0], 1);
-
+    cout << "para_Td[0]:" << para_Td[0] << endl;
     if (!ESTIMATE_TD || Vs[0].norm() < 0.2)
         problem.SetParameterBlockConstant(para_Td[0]);
 
@@ -1143,9 +1148,10 @@ void Estimator::optimization()
         for (int i = 0; i < frame_count; i++)
         {
             int j = i + 1;
-            if (pre_integrations[j]->sum_dt > 10.0)
+            if (pre_integrations[j]->sum_dt > 10.0)//如果imu数据跨度大于10s，则不参与优化。
                 continue;
             IMUFactor* imu_factor = new IMUFactor(pre_integrations[j]);
+            //条件IMU的Residual Block
             problem.AddResidualBlock(imu_factor, NULL, para_Pose[i], para_SpeedBias[i], para_Pose[j], para_SpeedBias[j]);
         }
     }
