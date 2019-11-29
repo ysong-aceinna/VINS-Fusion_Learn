@@ -84,7 +84,7 @@ class IMUFactor : public ceres::SizedCostFunction<15, 7, 9, 7, 9> // <kNumResidu
             Eigen::Matrix3d dv_dba = pre_integration->jacobian.template block<3, 3>(O_V, O_BA);
             Eigen::Matrix3d dv_dbg = pre_integration->jacobian.template block<3, 3>(O_V, O_BG);
 
-            if (pre_integration->jacobian.maxCoeff() > 1e8 || pre_integration->jacobian.minCoeff() < -1e8)
+            if (pre_integration->jacobian.maxCoeff() > 1e8 || pre_integration->jacobian.minCoeff() < -1e8)//jacobian.maxCoeff(): jacobian中元素的最大值。
             {
                 LOG(WARNING) << "numerical unstable in preintegration";
                 //std::cout << pre_integration->jacobian << std::endl;

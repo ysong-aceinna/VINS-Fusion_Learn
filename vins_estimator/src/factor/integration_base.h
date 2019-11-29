@@ -70,6 +70,9 @@ class IntegrationBase
                             Eigen::Vector3d &result_delta_p, Eigen::Quaterniond &result_delta_q, Eigen::Vector3d &result_delta_v,
                             Eigen::Vector3d &result_linearized_ba, Eigen::Vector3d &result_linearized_bg, bool update_jacobian)
     {
+        //SONG: delta_前缀，代表i时刻的IMU增量信息。如，delta_p为i时刻的增量Position。
+        //result_delta_ 前缀，代表i+1时刻的MU增量信息。如，result_delta_p为i+1时刻的增量Position。
+        //参考pape [27]
         //ROS_INFO("midpoint integration");
         Vector3d un_acc_0 = delta_q * (_acc_0 - linearized_ba);
         Vector3d un_gyr = 0.5 * (_gyr_0 + _gyr_1) - linearized_bg;
@@ -206,7 +209,7 @@ class IntegrationBase
     Eigen::Matrix<double, 15, 15> jacobian, covariance;
     Eigen::Matrix<double, 15, 15> step_jacobian;
     Eigen::Matrix<double, 15, 18> step_V;
-    Eigen::Matrix<double, 18, 18> noise;
+    Eigen::Matrix<double, 18, 18> noise; //噪声项的对角协方差矩阵,不要被变量名误导。
 
     double sum_dt;
     Eigen::Vector3d delta_p;
