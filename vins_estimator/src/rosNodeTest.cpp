@@ -143,7 +143,7 @@ void imu_callback(const sensor_msgs::ImuConstPtr &imu_msg)
     double rz = imu_msg->angular_velocity.z;
     Vector3d acc(dx, dy, dz);
     Vector3d gyr(rx, ry, rz);
-    estimator.inputIMU(t, acc, gyr);
+    estimator.inputIMU(t, acc, );
     return;
 }
 

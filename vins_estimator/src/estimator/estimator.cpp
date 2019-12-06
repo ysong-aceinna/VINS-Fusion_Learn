@@ -344,7 +344,7 @@ void Estimator::processMeasurements()
                     break;
                 else
                 {
-                    // printf("wait for imu ... \n");//SONG:用S1030经常发现有这个提示。单用EuRoC极少出现。 @@@@@
+                    // printf("wait for imu ... \n");//SONG:用S1030经常发现有这个提示。但用EuRoC极少出现。
                     if (! MULTIPLE_THREAD)
                         return;
                     std::chrono::milliseconds dura(5);
@@ -542,7 +542,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
                     optimization();
                     updateLatestStates();
                     solver_flag = NON_LINEAR;
-                    optimization();
+                    optimization();//SONG: 为什么再做一次优化呢？
                     slideWindow();
                     LOG(INFO) << "Initialization finish!";
                 }
@@ -1117,17 +1117,17 @@ void Estimator::optimization()
         ceres::LocalParameterization *local_parameterization = new PoseLocalParameterization();
         //将外参R,T 添加到参数块。
         problem.AddParameterBlock(para_Ex_Pose[i], SIZE_POSE, local_parameterization);
-        //Vs[0].norm() 是求Vs[0]的范数，即sqrt(v_x*v_x + v_y*v_y + v_z*v_z),即判断和速是否大于0.2 m/s
+        //Vs[0].norm() 是求Vs[0]的范数，即sqrt(v_x*v_x + v_y*v_y + v_z*v_z),即判断合速度是否大于0.2 m/s
         if ((ESTIMATE_EXTRINSIC && frame_count == WINDOW_SIZE && Vs[0].norm() > 0.2) || openExEstimation)
         {
             // LOG(INFO) << "estimate extinsic param";
             openExEstimation = 1;
         }
         else
-        {
+        { 
             //LOG(INFO) << "fix extinsic param";
             //如果不需要估计, 则para_Ex_Pose[i]不变。
-            problem.SetParameterBlockConstant(para_Ex_Pose[i]);
+            problem.SetParameterBlockConstant(para_Ex_Pose[i]); 
         }
     }
     //para_Td是啥？

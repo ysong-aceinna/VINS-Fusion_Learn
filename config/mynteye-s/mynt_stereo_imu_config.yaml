@@ -93,7 +93,7 @@ keyframe_parallax: 10.0 # keyframe selection threshold (pixel)
 #gyr_n: 0.01         # gyroscope measurement noise standard deviation.     
 #acc_w: 0.001        # accelerometer bias random work noise standard deviation.  
 #gyr_w: 0.0001       # gyroscope bias random work noise standard deviation.     
-#g_norm: 9.81007     # gravity magnitude
+#g_norm: 9.8         # gravity magnitude
 
 acc_n: 0.0268014618074         # accelerometer measurement noise standard deviation. #0.599298904976
 gyr_n: 0.00888232829671        # gyroscope measurement noise standard deviation.     #0.198614898699

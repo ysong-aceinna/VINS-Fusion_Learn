@@ -52,6 +52,7 @@ class Utility
         return q;
     }
 
+    //SONG:左扰动
     template <typename Derived>
     static Eigen::Matrix<typename Derived::Scalar, 4, 4> Qleft(const Eigen::QuaternionBase<Derived> &q)
     {
@@ -61,7 +62,8 @@ class Utility
         ans.template block<3, 1>(1, 0) = qq.vec(), ans.template block<3, 3>(1, 1) = qq.w() * Eigen::Matrix<typename Derived::Scalar, 3, 3>::Identity() + skewSymmetric(qq.vec());
         return ans;
     }
-
+    
+    //SONG:右扰动
     template <typename Derived>
     static Eigen::Matrix<typename Derived::Scalar, 4, 4> Qright(const Eigen::QuaternionBase<Derived> &p)
     {
