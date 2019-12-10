@@ -62,6 +62,10 @@ class IntegrationBase
             propagate(dt_buf[i], acc_buf[i], gyr_buf[i]);
     }
 
+    //SONG:
+    // 1. 递推IMU增量的PVQ
+    // 2. 计算IMU增量的Jacobian
+    // 3. 更新协方差矩阵
     void midPointIntegration(double _dt, 
                             const Eigen::Vector3d &_acc_0, const Eigen::Vector3d &_gyr_0,
                             const Eigen::Vector3d &_acc_1, const Eigen::Vector3d &_gyr_1,
@@ -70,13 +74,13 @@ class IntegrationBase
                             Eigen::Vector3d &result_delta_p, Eigen::Quaterniond &result_delta_q, Eigen::Vector3d &result_delta_v,
                             Eigen::Vector3d &result_linearized_ba, Eigen::Vector3d &result_linearized_bg, bool update_jacobian)
     {
-        //SONG: delta_前缀，代表i时刻的IMU增量信息。如，delta_p为i时刻的增量Position。
+        //SONG: delta_ 前缀，代表i时刻的IMU增量信息。如，delta_p为i时刻的增量Position。
         //result_delta_ 前缀，代表i+1时刻的MU增量信息。如，result_delta_p为i+1时刻的增量Position。
-        //参考pape [27]
+        //参考paper [27] 或 崔华坤[8]
         //ROS_INFO("midpoint integration");
-        Vector3d un_acc_0 = delta_q * (_acc_0 - linearized_ba);
+        Vector3d un_acc_0 = delta_q * (_acc_0 - linearized_ba); //delta_q的初始值为单位阵，参考系为IMU系,即body系。
         Vector3d un_gyr = 0.5 * (_gyr_0 + _gyr_1) - linearized_bg;
-        result_delta_q = delta_q * Quaterniond(1, un_gyr(0) * _dt / 2, un_gyr(1) * _dt / 2, un_gyr(2) * _dt / 2);
+        result_delta_q = delta_q * Quaterniond(1, un_gyr(0) * _dt / 2, un_gyr(1) * _dt / 2, un_gyr(2) * _dt / 2); //第二项功能同Utility::deltaQ()。
         Vector3d un_acc_1 = result_delta_q * (_acc_1 - linearized_ba);
         Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
         result_delta_p = delta_p + delta_v * _dt + 0.5 * un_acc * _dt * _dt;
@@ -90,7 +94,7 @@ class IntegrationBase
             Vector3d a_0_x = _acc_0 - linearized_ba;
             Vector3d a_1_x = _acc_1 - linearized_ba;
             Matrix3d R_w_x, R_a_0_x, R_a_1_x;
-
+            //构造反对称矩阵R_w_x，R_a_0_x，R_a_1_x，功能同Utility::skewSymmetric().
             R_w_x<<0, -w_x(2), w_x(1),
                 w_x(2), 0, -w_x(0),
                 -w_x(1), w_x(0), 0;
@@ -140,7 +144,7 @@ class IntegrationBase
         }
 
     }
-
+    //主要是做中值积分
     void propagate(double _dt, const Eigen::Vector3d &_acc_1, const Eigen::Vector3d &_gyr_1)
     {
         dt = _dt;
@@ -200,8 +204,8 @@ class IntegrationBase
     }
 
     double dt;
-    Eigen::Vector3d acc_0, gyr_0;
-    Eigen::Vector3d acc_1, gyr_1;
+    Eigen::Vector3d acc_0, gyr_0; //上一帧
+    Eigen::Vector3d acc_1, gyr_1; //当前帧
 
     const Eigen::Vector3d linearized_acc, linearized_gyr;
     Eigen::Vector3d linearized_ba, linearized_bg;

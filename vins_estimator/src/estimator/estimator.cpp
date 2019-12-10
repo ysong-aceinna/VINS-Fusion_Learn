@@ -344,7 +344,7 @@ void Estimator::processMeasurements()
                     break;
                 else
                 {
-                    // printf("wait for imu ... \n");//SONG:用S1030经常发现有这个提示。但用EuRoC极少出现。
+                    printf("wait for imu ... \n");//SONG:用S1030经常发现有这个提示。但用EuRoC极少出现。
                     if (! MULTIPLE_THREAD)
                         return;
                     std::chrono::milliseconds dura(5);
@@ -394,8 +394,11 @@ void Estimator::processMeasurements()
     }
 }
 
-//SONG: 获取IMU的初始姿态，并赋给Rs[0]。
-//这里要测试一下,如果不是在车辆静止状态,而是在有家减速的汽车行驶过程中得到的初始姿态,对后边的最终结果有什么影响.
+//SONG: 获取IMU的初始姿态，并赋给Rs[0]，并以此结果建立坐标系。
+//这里要测试一下,如果不是在车辆静止状态,而是在有加减速的汽车行驶过程中得到的初始姿态,对后边的最终结果有什么影响.
+//测试结果：
+//1. 在公司院子里，汽车转弯过程中做初始化，对检测结果影响不大
+//2. 在马路上转弯时做初始化，结果偏差非常大。
 void Estimator::initFirstIMUPose(vector<pair<double, Eigen::Vector3d>> &accVector)
 {
     printf("init first imu pose\n");
@@ -428,7 +431,7 @@ void Estimator::initFirstPose(Eigen::Vector3d p, Eigen::Matrix3d r)
     initR = r;
 }
 
-//SONG: 
+//SONG:
 // 1. 类似fastPredictIMU,递推速度和位置，不同的是fastPredictIMU是递推到latest_P，而这里是递推到Ps。
 // 2. 构造pre_integrations，它会计算雅克比矩阵、残差的协方差矩阵等参数，这些参数优化时会用到。
 void Estimator::processIMU(double t, double dt, const Vector3d &linear_acceleration, const Vector3d &angular_velocity)
@@ -444,9 +447,16 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
     {
         pre_integrations[frame_count] = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
     }
-    if (frame_count != 0)
+    if (frame_count != 0)//为什么滑动窗口的第一帧不需要做下边的预计分和递推？
     {
         pre_integrations[frame_count]->push_back(dt, linear_acceleration, angular_velocity);
+
+        /*
+        下边对tmp_pre_integration又做了一次IMU的预计分，是对计算资源的浪费。两种改进方法:
+        1. 在processIMU中做修改，将下边pre_integrations[frame_count]->push_back的结果通过拷贝构造函数赋值给tmp_pre_integration，缺点是每做一次预计分就要赋值一次;
+        2. 在processImage中修改，将pre_integrations[frame_count]->push_back的结果通过拷贝构造函数赋值给tmp_pre_integration，相对方法1的优点是，只在使用tmp_pre_integration前做一次赋值，
+        */
+
         //if(solver_flag != NON_LINEAR)
             tmp_pre_integration->push_back(dt, linear_acceleration, angular_velocity);
 
@@ -454,10 +464,11 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
         linear_acceleration_buf[frame_count].push_back(linear_acceleration);
         angular_velocity_buf[frame_count].push_back(angular_velocity);
 
+        //下边为中值积分。本套代码中有多个地方都在做中值积分，目的和区别是什么呢？
         int j = frame_count;         
-        Vector3d un_acc_0 = Rs[j] * (acc_0 - Bas[j]) - g;
+        Vector3d un_acc_0 = Rs[j] * (acc_0 - Bas[j]) - g;//这行有问题，将accel从b系转到w系，但Rs是从w系转b系的转换矩阵,应该使用Rs[j].T, 需要debug。@@@@@
         Vector3d un_gyr = 0.5 * (gyr_0 + angular_velocity) - Bgs[j];
-        Rs[j] *= Utility::deltaQ(un_gyr * dt).toRotationMatrix();
+        Rs[j] *= Utility::deltaQ(un_gyr * dt).toRotationMatrix(); //根据崔华坤[2], Rs(w系)和等号右侧部分做四元数乘法，得到w系下的姿态矩阵。等号右侧是在b系下, 而Rs在w系下，这个直接乘理解不了。
         Vector3d un_acc_1 = Rs[j] * (linear_acceleration - Bas[j]) - g;
         Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
         Ps[j] += dt * Vs[j] + 0.5 * dt * dt * un_acc;
@@ -851,7 +862,7 @@ bool Estimator::visualInitialAlign()
     Matrix3d R0 = Utility::g2R(g);
     double yaw = Utility::R2ypr(R0 * Rs[0]).x();
     R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0;
-    g = R0 * g;
+    g = R0 * g; //这里需要debug一下，看看当camera倾斜时g的值，应该是(0,0,1g).
     //Matrix3d rot_diff = R0 * Rs[0].transpose();
     Matrix3d rot_diff = R0;
     for (int i = 0; i <= frame_count; i++)
@@ -1040,7 +1051,13 @@ void Estimator::double2vector()
         td = para_Td[0][0];
 
 }
-
+/*
+判断检测失败的条件：
+1. 特征点数量太少;
+2. 根据优化得到acc和gyro的bias太大;
+3. 当前与上一帧位移差太大，特别是沿z轴方向的位移大于1米时;
+4. 当前与上一帧转过的角度（绕欧拉轴的转角）太大。
+*/
 bool Estimator::failureDetection()
 {
     return false;
@@ -1081,6 +1098,7 @@ bool Estimator::failureDetection()
     Matrix3d delta_R = tmp_R.transpose() * last_R;
     Quaterniond delta_Q(delta_R);
     double delta_angle;
+    //根据四元数与欧拉轴角的转换关系: w=cos(a/2), 得绕欧拉轴的转角a=arccos(w)*2
     delta_angle = acos(delta_Q.w()) * 2.0 / 3.14 * 180.0;
     if (delta_angle > 50)
     {
@@ -1494,7 +1512,7 @@ void Estimator::slideWindow()
                     double tmp_dt = dt_buf[frame_count][i];
                     Vector3d tmp_linear_acceleration = linear_acceleration_buf[frame_count][i];
                     Vector3d tmp_angular_velocity = angular_velocity_buf[frame_count][i];
-
+                    //processIMU不是已经做过预计分了吗，这里为什么又要重复做预计分？
                     pre_integrations[frame_count - 1]->push_back(tmp_dt, tmp_linear_acceleration, tmp_angular_velocity);
 
                     dt_buf[frame_count - 1].push_back(tmp_dt);

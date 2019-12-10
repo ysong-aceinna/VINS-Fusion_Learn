@@ -24,7 +24,6 @@ Eigen::Matrix3d Utility::g2R(const Eigen::Vector3d &g)
     Eigen::Vector3d ng2{0, 0, 1.0};
     R0 = Eigen::Quaterniond::FromTwoVectors(ng1, ng2).toRotationMatrix(); //SONG: 旋转矩阵R0满足：R0*ng1 = ng2
 
-   //SONG: 又没有mag，此处的yaw怎么理解？需要debug看看。
     double yaw = Utility::R2ypr(R0).x(); //SONG: R2ypr由姿态矩阵R计算YPR. debug_info: yaw=0;
     R0 = Utility::ypr2R(Eigen::Vector3d{-yaw, 0, 0}) * R0;
     /*

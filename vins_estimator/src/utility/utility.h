@@ -17,7 +17,7 @@
 class Utility
 {
   public:
-    template <typename Derived>
+    template <typename Derived> //将角度theta即(w * dt)转为四元数。崔华坤[2]中，是b系下陀螺转过的角度。
     static Eigen::Quaternion<typename Derived::Scalar> deltaQ(const Eigen::MatrixBase<Derived> &theta)
     {
         typedef typename Derived::Scalar Scalar_t;
@@ -32,7 +32,7 @@ class Utility
         return dq;
     }
 
-    template <typename Derived>
+    template <typename Derived> //反对称矩阵
     static Eigen::Matrix<typename Derived::Scalar, 3, 3> skewSymmetric(const Eigen::MatrixBase<Derived> &q)
     {
         Eigen::Matrix<typename Derived::Scalar, 3, 3> ans;

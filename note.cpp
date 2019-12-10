@@ -29,6 +29,8 @@
 
     //用R初始化q
     Eigen::Quaterniond q{R};
+    //或
+    Eigen::Quaterniond q(R);
 
     //多维vector的初始化
     VectorXd dep_vec(getFeatureCount());
