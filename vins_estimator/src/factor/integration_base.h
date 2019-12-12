@@ -77,6 +77,7 @@ class IntegrationBase
         //SONG: delta_ 前缀，代表i时刻的IMU增量信息。如，delta_p为i时刻的增量Position。
         //result_delta_ 前缀，代表i+1时刻的MU增量信息。如，result_delta_p为i+1时刻的增量Position。
         //参考paper [27] 或 崔华坤[8]
+        //这里的中值积分，是用于计算PVQ的增量，对比processIMU和fastPredictIMU中的中值积分。
         //ROS_INFO("midpoint integration");
         Vector3d un_acc_0 = delta_q * (_acc_0 - linearized_ba); //delta_q的初始值为单位阵，参考系为IMU系,即body系。
         Vector3d un_gyr = 0.5 * (_gyr_0 + _gyr_1) - linearized_bg;
@@ -88,7 +89,7 @@ class IntegrationBase
         result_linearized_ba = linearized_ba;
         result_linearized_bg = linearized_bg;         
 
-        if(update_jacobian)
+        if(update_jacobian) //崔华坤[15]
         {
             Vector3d w_x = 0.5 * (_gyr_0 + _gyr_1) - linearized_bg;
             Vector3d a_0_x = _acc_0 - linearized_ba;
@@ -105,7 +106,7 @@ class IntegrationBase
                 a_1_x(2), 0, -a_1_x(0),
                 -a_1_x(1), a_1_x(0), 0;
 
-            MatrixXd F = MatrixXd::Zero(15, 15);
+            MatrixXd F = MatrixXd::Zero(15, 15); //对应 崔华坤[16]中的F矩阵.
             F.block<3, 3>(0, 0) = Matrix3d::Identity();
             F.block<3, 3>(0, 3) = -0.25 * delta_q.toRotationMatrix() * R_a_0_x * _dt * _dt + 
                                   -0.25 * result_delta_q.toRotationMatrix() * R_a_1_x * (Matrix3d::Identity() - R_w_x * _dt) * _dt * _dt;
@@ -139,8 +140,8 @@ class IntegrationBase
 
             //step_jacobian = F;
             //step_V = V;
-            jacobian = F * jacobian;
-            covariance = F * covariance * F.transpose() + V * noise * V.transpose();
+            jacobian = F * jacobian; //崔华坤[16]
+            covariance = F * covariance * F.transpose() + V * noise * V.transpose(); //崔华坤[17]
         }
 
     }
@@ -150,7 +151,7 @@ class IntegrationBase
         dt = _dt;
         acc_1 = _acc_1;
         gyr_1 = _gyr_1;
-        Vector3d result_delta_p;
+        Vector3d result_delta_p;    //根据上一帧的PVQ 增量，根据 崔华坤[8], 得到当前帧PVQ的增量。
         Quaterniond result_delta_q;
         Vector3d result_delta_v;
         Vector3d result_linearized_ba;
@@ -166,11 +167,11 @@ class IntegrationBase
         delta_p = result_delta_p;
         delta_q = result_delta_q;
         delta_v = result_delta_v;
-        linearized_ba = result_linearized_ba;
+        linearized_ba = result_linearized_ba; //这里的两条赋值是多余的，因为在midPointIntegration中这两对变量就已经是相等的了，需要debug。@@@@@
         linearized_bg = result_linearized_bg;
         delta_q.normalize();
         sum_dt += dt;
-        acc_0 = acc_1;
+        acc_0 = acc_1;//更新上一帧的IMU数据。
         gyr_0 = gyr_1;  
      
     }
@@ -180,23 +181,25 @@ class IntegrationBase
     {
         Eigen::Matrix<double, 15, 1> residuals;
 
-        Eigen::Matrix3d dp_dba = jacobian.block<3, 3>(O_P, O_BA);
-        Eigen::Matrix3d dp_dbg = jacobian.block<3, 3>(O_P, O_BG);
+        Eigen::Matrix3d dp_dba = jacobian.block<3, 3>(O_P, O_BA); //(0, 9),  P增量误差对acc_bias求偏导;
+        Eigen::Matrix3d dp_dbg = jacobian.block<3, 3>(O_P, O_BG); //(0, 12), P增量误差对gyro_bias求偏导;
 
-        Eigen::Matrix3d dq_dbg = jacobian.block<3, 3>(O_R, O_BG);
+        Eigen::Matrix3d dq_dbg = jacobian.block<3, 3>(O_R, O_BG); //(3, 12), Q增量误差对gyro_bias求偏导;
 
-        Eigen::Matrix3d dv_dba = jacobian.block<3, 3>(O_V, O_BA);
-        Eigen::Matrix3d dv_dbg = jacobian.block<3, 3>(O_V, O_BG);
-
-        Eigen::Vector3d dba = Bai - linearized_ba;
-        Eigen::Vector3d dbg = Bgi - linearized_bg;
-        //paper 式(33)
+        Eigen::Matrix3d dv_dba = jacobian.block<3, 3>(O_V, O_BA); //(6, 9),  V增量误差对acc_bias求偏导;
+        Eigen::Matrix3d dv_dbg = jacobian.block<3, 3>(O_V, O_BG); //(6, 12), V增量误差对gyro_bias求偏导;
+        
+        //Bai是第i个滑动窗口对应的accel bias
+        //linearized_ba是由在estimator::optimization得到,在新一个滑动窗口创建时传入IntegrationBase。
+        Eigen::Vector3d dba = Bai - linearized_ba; //delta accel bias, 即bias的增量。
+        Eigen::Vector3d dbg = Bgi - linearized_bg; //delta gyro bias
+        //paper 式(33) 崔华坤[6]
         Eigen::Quaterniond corrected_delta_q = delta_q * Utility::deltaQ(dq_dbg * dbg);
         Eigen::Vector3d corrected_delta_v = delta_v + dv_dba * dba + dv_dbg * dbg;
         Eigen::Vector3d corrected_delta_p = delta_p + dp_dba * dba + dp_dbg * dbg;
-        //paper 式(16)
+        //paper 式(16) 崔华坤[20]
         residuals.block<3, 1>(O_P, 0) = Qi.inverse() * (0.5 * G * sum_dt * sum_dt + Pj - Pi - Vi * sum_dt) - corrected_delta_p;
-        residuals.block<3, 1>(O_R, 0) = 2 * (corrected_delta_q.inverse() * (Qi.inverse() * Qj)).vec();
+        residuals.block<3, 1>(O_R, 0) = 2 * (corrected_delta_q.inverse() * (Qi.inverse() * Qj)).vec();  //Eigen::Quaterniond::vec()  取四元数的矢量部分。
         residuals.block<3, 1>(O_V, 0) = Qi.inverse() * (G * sum_dt + Vj - Vi) - corrected_delta_v;
         residuals.block<3, 1>(O_BA, 0) = Baj - Bai;
         residuals.block<3, 1>(O_BG, 0) = Bgj - Bgi;
@@ -204,19 +207,19 @@ class IntegrationBase
     }
 
     double dt;
-    Eigen::Vector3d acc_0, gyr_0; //上一帧
-    Eigen::Vector3d acc_1, gyr_1; //当前帧
+    Eigen::Vector3d acc_0, gyr_0; //上一帧的IMU数据
+    Eigen::Vector3d acc_1, gyr_1; //当前帧的IMU数据
 
     const Eigen::Vector3d linearized_acc, linearized_gyr;
     Eigen::Vector3d linearized_ba, linearized_bg;
 
-    Eigen::Matrix<double, 15, 15> jacobian, covariance;
-    Eigen::Matrix<double, 15, 15> step_jacobian;
-    Eigen::Matrix<double, 15, 18> step_V;
+    Eigen::Matrix<double, 15, 15> jacobian, covariance; // PVQ 增量误差的Jacobian和协方差
+    Eigen::Matrix<double, 15, 15> step_jacobian; //没有用到。
+    Eigen::Matrix<double, 15, 18> step_V; //没有用到。
     Eigen::Matrix<double, 18, 18> noise; //噪声项的对角协方差矩阵,不要被变量名误导。
 
     double sum_dt;
-    Eigen::Vector3d delta_p;
+    Eigen::Vector3d delta_p;    //两帧之间PVQ增量，注意，delta_p,delta_q和delta_v都是在body系下的表示！  参考崔华坤[8]
     Eigen::Quaterniond delta_q;
     Eigen::Vector3d delta_v;
 

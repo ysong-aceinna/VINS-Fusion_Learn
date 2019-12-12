@@ -138,13 +138,13 @@ class Estimator
 
     Matrix3d back_R0, last_R, last_R0;
     Vector3d back_P0, last_P, last_P0;
-    double Headers[(WINDOW_SIZE + 1)];
+    double Headers[(WINDOW_SIZE + 1)]; //存放每个滑动窗口的时间戳
 
     IntegrationBase *pre_integrations[(WINDOW_SIZE + 1)];
     Vector3d acc_0, gyr_0;//IMU当前帧的acc和gyro
 
     vector<double> dt_buf[(WINDOW_SIZE + 1)];
-    vector<Vector3d> linear_acceleration_buf[(WINDOW_SIZE + 1)];
+    vector<Vector3d> linear_acceleration_buf[(WINDOW_SIZE + 1)]; //保存滑动窗口内的IMU数据。
     vector<Vector3d> angular_velocity_buf[(WINDOW_SIZE + 1)];
 
     int frame_count;
@@ -166,23 +166,23 @@ class Estimator
 
 
     double para_Pose[WINDOW_SIZE + 1][SIZE_POSE]; //pos 3维度，四元数姿态4维度， 共7个维度。
-    double para_SpeedBias[WINDOW_SIZE + 1][SIZE_SPEEDBIAS];
+    double para_SpeedBias[WINDOW_SIZE + 1][SIZE_SPEEDBIAS]; //Vs, Bas, Bgs
     double para_Feature[NUM_OF_F][SIZE_FEATURE];
-    double para_Ex_Pose[2][SIZE_POSE];
-    double para_Retrive_Pose[SIZE_POSE];
-    double para_Td[1][1];
-    double para_Tr[1][1];
+    double para_Ex_Pose[2][SIZE_POSE]; //tic  ric
+    double para_Retrive_Pose[SIZE_POSE]; //没有用到
+    double para_Td[1][1]; //对应td, 用于image和IMU做时间对齐。
+    double para_Tr[1][1]; //没有用到
 
-    int loop_window_index;
+    int loop_window_index; //没有用到
 
     MarginalizationInfo *last_marginalization_info;
     vector<double *> last_marginalization_parameter_blocks;
 
-    map<double, ImageFrame> all_image_frame;
+    map<double, ImageFrame> all_image_frame; // 存储滑动窗口的[特征点时间戳，特征点信息ImageFrame]，在slideWindow()中将过期的ImageFrame移除。
     IntegrationBase *tmp_pre_integration;
 
-    Eigen::Vector3d initP;
-    Eigen::Matrix3d initR;
+    Eigen::Vector3d initP; //没有用到
+    Eigen::Matrix3d initR; //没有用到
 
     double latest_time;
     Eigen::Vector3d latest_P, latest_V, latest_Ba, latest_Bg, latest_acc_0, latest_gyr_0;

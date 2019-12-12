@@ -63,7 +63,7 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
     {
         FeaturePerFrame f_per_fra(id_pts.second[0].second, td);//特征点管理器，存储特征点格式：首先按照特征点ID，一个一个存储，每个ID会包含其在不同帧上的位置
         assert(id_pts.second[0].first == 0);
-        if(id_pts.second.size() == 2)
+        if(id_pts.second.size() == 2)//双目相机
         {
             f_per_fra.rightObservation(id_pts.second[1].second);
             assert(id_pts.second[1].first == 1);
@@ -71,13 +71,13 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
 
         int feature_id = id_pts.first;// find_if 函数，找到一个interator使第三个仿函数参数为真
         auto it = find_if(feature.begin(), feature.end(), [feature_id](const FeaturePerId &it)
-                          {
-            return it.feature_id == feature_id;
-                          });
+                    {
+                        return it.feature_id == feature_id;//如果找到相同id的特征点则跳出find_if。
+                    });
 
-        if (it == feature.end())
+        if (it == feature.end())//如果没有找到此ID，就在管理器中增加此特征点
         {
-            feature.push_back(FeaturePerId(feature_id, frame_count)); //如果没有找到此ID，就在管理器中增加此特征点
+            feature.push_back(FeaturePerId(feature_id, frame_count)); 
             feature.back().feature_per_frame.push_back(f_per_fra);
             new_feature_num++;
         }

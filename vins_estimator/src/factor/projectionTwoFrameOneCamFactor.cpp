@@ -98,7 +98,7 @@ bool ProjectionTwoFrameOneCamFactor::Evaluate(double const *const *parameters, d
 #endif
         reduce = sqrt_info * reduce;
 
-        if (jacobians[0])
+        if (jacobians[0]) //jacobian矩阵的更新公式参考崔华坤[28] 
         {
             Eigen::Map<Eigen::Matrix<double, 2, 7, Eigen::RowMajor>> jacobian_pose_i(jacobians[0]);
 

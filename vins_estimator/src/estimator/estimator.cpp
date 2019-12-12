@@ -129,7 +129,10 @@ void Estimator::setParameter()
         cout << " exitrinsic cam " << i << endl  << ric[i] << endl << tic[i].transpose() << endl;
     }
     f_manager.setRic(ric);   
-    //SONG:sqrt_info是static变量。目前看不懂ProjectionTwoFrameOneCamFactor的功能。
+    //SONG:视觉约束相关的costfunction.
+    //ProjectionTwoFrameOneCamFactor:对单目相机，相邻两个视频帧，对于同一个feature的约束。崔华坤[3.4节]
+    //ProjectionTwoFrameTwoCamFactor:对双目相机，相邻两个视频帧，对两个feature的约束
+    //ProjectionOneFrameTwoCamFactor:对双目相机，一个视频帧，对两个feature的约束
     ProjectionTwoFrameOneCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity(); //SONG:Identity()单位矩阵
     ProjectionTwoFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
     ProjectionOneFrameTwoCamFactor::sqrt_info = FOCAL_LENGTH / 1.5 * Matrix2d::Identity();
@@ -194,8 +197,8 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
     //initFirstIMUPose中IMU数据个数约为: 
     // 1. 若jump_frames_cnt为奇数: (jump_frames_cnt+1) *(IMU频率/图像频率)
     // 2. 若jump_frames_cnt为偶数, jump_frames_cnt*(IMU频率/图像频率)
-    // 举例: 当jump_frames_cnt为2时,如过image为20hz,对应20个imu数据;
-    //      当jump_frames_cnt为2时,如过image为10hz,对应40个imu数据;
+    // 举例: 当jump_frames_cnt为2时,如image为20hz,对应20个imu数据;
+    //      当jump_frames_cnt为2时,如image为10hz,对应40个imu数据;
     const int jump_frames_cnt = 2; 
     if(inputImageCnt < jump_frames_cnt ) return;
 
@@ -445,7 +448,7 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
 
     if (!pre_integrations[frame_count])
     {
-        pre_integrations[frame_count] = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
+        pre_integrations[frame_count] = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};//Bas,Bgs由optimization得到。
     }
     if (frame_count != 0)//为什么滑动窗口的第一帧不需要做下边的预计分和递推？
     {
@@ -465,10 +468,11 @@ void Estimator::processIMU(double t, double dt, const Vector3d &linear_accelerat
         angular_velocity_buf[frame_count].push_back(angular_velocity);
 
         //下边为中值积分。本套代码中有多个地方都在做中值积分，目的和区别是什么呢？
-        int j = frame_count;         
-        Vector3d un_acc_0 = Rs[j] * (acc_0 - Bas[j]) - g;//这行有问题，将accel从b系转到w系，但Rs是从w系转b系的转换矩阵,应该使用Rs[j].T, 需要debug。@@@@@
+        //下边中值积分得到的Rs, Ps, Vs为optimization提供优化的初值。
+        int j = frame_count;
+        Vector3d un_acc_0 = Rs[j] * (acc_0 - Bas[j]) - g;
         Vector3d un_gyr = 0.5 * (gyr_0 + angular_velocity) - Bgs[j];
-        Rs[j] *= Utility::deltaQ(un_gyr * dt).toRotationMatrix(); //根据崔华坤[2], Rs(w系)和等号右侧部分做四元数乘法，得到w系下的姿态矩阵。等号右侧是在b系下, 而Rs在w系下，这个直接乘理解不了。
+        Rs[j] *= Utility::deltaQ(un_gyr * dt).toRotationMatrix();
         Vector3d un_acc_1 = Rs[j] * (linear_acceleration - Bas[j]) - g;
         Vector3d un_acc = 0.5 * (un_acc_0 + un_acc_1);
         Ps[j] += dt * Vs[j] + 0.5 * dt * dt * un_acc;
@@ -493,6 +497,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
 {
     DLOG(INFO) << "new image coming ------------------------------------------";
     DLOG(INFO) << "Adding feature points " << image.size();
+    //检查视差：足够大，则将窗口中最老的一帧边缘化掉，否则将第二新的帧边缘化掉。
     if (f_manager.addFeatureCheckParallax(frame_count, image, td))
     {
         marginalization_flag = MARGIN_OLD;
@@ -1169,7 +1174,7 @@ void Estimator::optimization()
             if (pre_integrations[j]->sum_dt > 10.0)//如果imu数据跨度大于10s，则不参与优化。
                 continue;
             IMUFactor* imu_factor = new IMUFactor(pre_integrations[j]);
-            //条件IMU的Residual Block
+            //添加IMU的Residual Block
             problem.AddResidualBlock(imu_factor, NULL, para_Pose[i], para_SpeedBias[i], para_Pose[j], para_SpeedBias[j]);
         }
     }

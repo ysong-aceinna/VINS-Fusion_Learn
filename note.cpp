@@ -31,10 +31,11 @@
     Eigen::Quaterniond q{R};
     //或
     Eigen::Quaterniond q(R);
+    
+    q.vec()  //取四元数的矢量部分。
 
     //多维vector的初始化
     VectorXd dep_vec(getFeatureCount());
-
 
 
 

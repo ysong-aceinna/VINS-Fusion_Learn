@@ -39,7 +39,7 @@ ProjectionTwoFrameTwoCamFactor::ProjectionTwoFrameTwoCamFactor(const Eigen::Vect
     tangent_base.block<1, 3>(1, 0) = b2.transpose();
 #endif
 };
-
+//这部分的残差计算和jacobian更新论文中并未给出。
 bool ProjectionTwoFrameTwoCamFactor::Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
 {
     TicToc tic_toc;
