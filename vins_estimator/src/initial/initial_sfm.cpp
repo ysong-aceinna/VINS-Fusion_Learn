@@ -119,7 +119,7 @@ void GlobalSFM::triangulateTwoFrames(int frame0, Eigen::Matrix<double, 3, 4> &Po
 		}							  
 	}
 }
-
+//步骤比较繁琐，参考 崔华坤[图8]
 // 	 q w_R_cam t w_R_cam
 //  c_rotation cam_R_w 
 //  c_translation cam_R_w
@@ -129,7 +129,7 @@ bool GlobalSFM::construct(int frame_num, Quaterniond* q, Vector3d* T, int l,
 			  const Matrix3d relative_R, const Vector3d relative_T,
 			  vector<SFMFeature> &sfm_f, map<int, Vector3d> &sfm_tracked_points)
 {
-	feature_num = sfm_f.size();
+	feature_num = sfm_f.size(); //特征点的数量
 	//cout << "set 0 and " << l << " as known " << endl;
 	// have relative_r relative_t
 	// intial two view

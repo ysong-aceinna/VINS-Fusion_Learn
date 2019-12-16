@@ -24,9 +24,10 @@ using namespace Eigen;
 #include "parameters.h"
 #include "../utility/tic_toc.h"
 
+//封装了单个特征点的信息
 class FeaturePerFrame
 {
-  public:
+  public: //默认是左目相机的7维特征点信息
     FeaturePerFrame(const Eigen::Matrix<double, 7, 1> &_point, double td)
     {
         point.x() = _point(0);
@@ -39,6 +40,7 @@ class FeaturePerFrame
         cur_td = td;
         is_stereo = false;
     }
+    //右目的特征点信息
     void rightObservation(const Eigen::Matrix<double, 7, 1> &_point)
     {
         pointRight.x() = _point(0);
@@ -57,14 +59,16 @@ class FeaturePerFrame
     bool is_stereo;
 };
 
+//对world系中的一个被观测点，会被滑动窗口中的n个视频帧所观测到，对应产生n个特征点信息。
+//FeaturePerId封装了1个被观测点在n个滑动窗口内的信息。
 class FeaturePerId
 {
   public:
-    const int feature_id;
-    int start_frame;
-    vector<FeaturePerFrame> feature_per_frame;
+    const int feature_id; //特征点id
+    int start_frame; //检测到该特征点的起始帧在滑动窗口中的位置
+    vector<FeaturePerFrame> feature_per_frame;//每个路标点由多个连续的视频帧观测到。feature_per_frame存储了1个特征点在所有滑动窗口中的7维特征。
     int used_num;
-    double estimated_depth;
+    double estimated_depth; //被观测点(x,y,z)到摄像机的距离，即z。
     int solve_flag; // 0 haven't solve yet; 1 solve succ; 2 solve fail;
 
     FeaturePerId(int _feature_id, int _start_frame)
@@ -101,7 +105,7 @@ class FeatureManager
     void removeBack();
     void removeFront(int frame_count);
     void removeOutlier(set<int> &outlierIndex);
-    list<FeaturePerId> feature;
+    list<FeaturePerId> feature; //滑窗内所有路标点。
     int last_track_num;
     double last_average_parallax;
     int new_feature_num;
@@ -109,7 +113,7 @@ class FeatureManager
 
   private:
     double compensatedParallax2(const FeaturePerId &it_per_id, int frame_count);
-    const Matrix3d *Rs;
+    const Matrix3d *Rs; //实际上没有用到，feature_manager.cpp中的Rs都是函数参数，而不是类的成员变量。
     Matrix3d ric[2];
 };
 

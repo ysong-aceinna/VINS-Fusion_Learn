@@ -50,6 +50,7 @@ Estimator::~Estimator()
 
 void Estimator::clearState()
 {
+    //清空IMU和feature buf缓存的数据。
     mProcess.lock();
     while(!accBuf.empty())
         accBuf.pop();
@@ -81,7 +82,7 @@ void Estimator::clearState()
         {
             delete pre_integrations[i];
             pre_integrations[i] = nullptr;        
-        }    
+        }
     }
 
     for (int i = 0; i < NUM_OF_CAM; i++)
@@ -150,6 +151,7 @@ void Estimator::setParameter()
     mProcess.unlock();
 }
 
+//changeSensorType似的程序在运行期间可以在Mono+IMU, Stereo+IMU, Stereo三种模式间切换，这个功能一般不用。
 void Estimator::changeSensorType(int use_imu, int use_stereo)
 {
     bool restart = false;
@@ -514,12 +516,12 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
     DLOG(INFO) << "number of feature: " << f_manager.getFeatureCount();
     Headers[frame_count] = header;
 
-    ImageFrame imageframe(image, header);
+    ImageFrame imageframe(image, header); //image实际上是特征点，命名有歧义。
     imageframe.pre_integration = tmp_pre_integration;
     all_image_frame.insert(make_pair(header, imageframe));
     tmp_pre_integration = new IntegrationBase{acc_0, gyr_0, Bas[frame_count], Bgs[frame_count]};
 
-    if(ESTIMATE_EXTRINSIC == 2)
+    if(ESTIMATE_EXTRINSIC == 2)//如果完全不知道T_camera_IMU,则使用CalibrationExRotation计算一个大概的T，后边再通过优化的方式估算一个更准确的T.
     {
         LOG(INFO) << "calibrating extrinsic param, rotation movement is needed";
         if (frame_count != 0)
@@ -679,11 +681,11 @@ bool Estimator::initialStructure()
         Vector3d sum_g;
         for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
         {
-            double dt = frame_it->second.pre_integration->sum_dt;
-            Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;
+            double dt = frame_it->second.pre_integration->sum_dt;//pre_integration中记录了预计分的时长sum_dt.
+            Vector3d tmp_g = frame_it->second.pre_integration->delta_v / dt;//delta_v是预计分中V的增量部分。
             sum_g += tmp_g;
         }
-        Vector3d aver_g; //计算线性加速度的均值
+        Vector3d aver_g; //即滑窗内所有tmp_g累加所得的sum_g的均值。
         aver_g = sum_g * 1.0 / ((int)all_image_frame.size() - 1);
         double var = 0;
         for (frame_it = all_image_frame.begin(), frame_it++; frame_it != all_image_frame.end(); frame_it++)
@@ -693,10 +695,13 @@ bool Estimator::initialStructure()
             var += (tmp_g - aver_g).transpose() * (tmp_g - aver_g);
             //cout << "frame g " << tmp_g.transpose() << endl;
         }
-        //计算线性加速度的标准差
+        //计算tmp_g的标准差
         var = sqrt(var / ((int)all_image_frame.size() - 1));
         // LOG(WARNING) << "IMU variation " << var << "!";
-        if(var < 0.25)//根据标准差判断是否移动幅度较小.
+        // 根据标准差判断是否移动幅度较小.
+        // 期初感觉不太合理，如果是匀速运动，var是0，相机也可能有较大平移并产生视差。
+        // 实际上，汽车从静止开始运动并做初始化时，不存在匀速运动的情况。一般是具有明显加速度的。
+        if(var < 0.25)
         {
             LOG(INFO) << "IMU excitation not enouth!";
             //return false;
@@ -705,18 +710,21 @@ bool Estimator::initialStructure()
     // global sfm
     Quaterniond Q[frame_count + 1];
     Vector3d T[frame_count + 1];
-    map<int, Vector3d> sfm_tracked_points;
+    map<int, Vector3d> sfm_tracked_points; //三角化出来的 3D 路标点
     vector<SFMFeature> sfm_f;
-    for (auto &it_per_id : f_manager.feature)
+    for (auto &it_per_id : f_manager.feature)//f_manager.feature：滑窗内所有特征点。
     {
         int imu_j = it_per_id.start_frame - 1;
-        SFMFeature tmp_feature;
+        //对于一个world系下的被观测点，被滑窗内n个图像观察到并生成n个特征点。
+        // tmp_feature 存储的是，一个world系下的被观测点对应的n个特征点的归一化平面坐标，及其在滑窗内的位置。
+        //sfm_f存储的是所有特征点在n个窗口内的信息。
+        SFMFeature tmp_feature; 
         tmp_feature.state = false;
         tmp_feature.id = it_per_id.feature_id;
         for (auto &it_per_frame : it_per_id.feature_per_frame)
         {
             imu_j++;
-            Vector3d pts_j = it_per_frame.point;
+            Vector3d pts_j = it_per_frame.point; //pts_j为归一化平面上的坐标。
             tmp_feature.observation.push_back(make_pair(imu_j, Eigen::Vector2d{pts_j.x(), pts_j.y()}));
         }
         sfm_f.push_back(tmp_feature);
@@ -724,6 +732,8 @@ bool Estimator::initialStructure()
     Matrix3d relative_R;
     Vector3d relative_T;
     int l; //SONG: 计算出relative_R, relative_T时，WINDOW_SIZE的编号索引。
+    // 并不是拿滑窗内所有的视频帧来求解相对位姿，只是用当前帧和参考帧（匹配特征点数较多的关键帧作为参考帧）求解。
+    // l就是参考帧在滑动窗口中的索引位置。
     if (!relativePose(relative_R, relative_T, l)) //SONG:根据对极几何，先求F基础矩阵，再求relative_R, relative_T。
     {
         LOG(INFO) << "Not enough features or parallax; Move device around";
@@ -731,7 +741,7 @@ bool Estimator::initialStructure()
     }
     GlobalSFM sfm;
     //SONG: 利用对极几何求出的relative_R, relative_T并不准确，
-    // 需要在sfm.construct中进一步优化，Q, T是优化后的结果。
+    // 需要在sfm.construct中用Ceres进一步优化，Q, T是优化后的结果。
     if(!sfm.construct(frame_count + 1, Q, T, l,
               relative_R, relative_T,
               sfm_f, sfm_tracked_points))
@@ -741,6 +751,7 @@ bool Estimator::initialStructure()
         return false;
     }
 
+    //计算滑窗内，所有帧相对第一个滑窗的R ,t
     //solve pnp for all frame
     map<double, ImageFrame>::iterator frame_it;
     map<int, Vector3d>::iterator it;
@@ -763,7 +774,7 @@ bool Estimator::initialStructure()
         }
         Matrix3d R_inital = (Q[i].inverse()).toRotationMatrix();
         Vector3d P_inital = - R_inital * T[i];
-        cv::eigen2cv(R_inital, tmp_r);
+        cv::eigen2cv(R_inital, tmp_r); //将Eigen变为OpenCV的cv::Mat类型。
         cv::Rodrigues(tmp_r, rvec);
         cv::eigen2cv(P_inital, t);
 
@@ -797,6 +808,20 @@ bool Estimator::initialStructure()
             DLOG(INFO) << "ot enough points for solve pnp!";
             return false;
         }
+
+        //上边这段代码，主要就是在构造3D-2D的对应点，即pts_3_vector和pts_2_vector。
+        /*3D-2D的PnP问题。
+        pts_3_vector： w系下的被观测点。 
+        pts_2_vector：在图像上的2D特征点。
+        K是相机内参,形式如下：
+            | fx  0  cx | 
+            | 0  fy  cy | 
+            | 0   0   1 | 
+        D: 畸变系数矩阵，如果为Null/empty,按无畸变来处理。
+        rvec和t：PnP输出的R，t [Input/Output]
+        useExtrinsicGuess：即下边的1(true)，表示是否提供初始的猜想值，猜想值输入即前边的rvec, t
+        ref: https://docs.opencv.org/3.4.8/d9/d0c/group__calib3d.html#ga549c2075fac14829ff4a58bc931c033d
+        */
         //SONG: 求解PnP, 这里内参矩阵K用单位阵，是不是有问题?
         if (! cv::solvePnP(pts_3_vector, pts_2_vector, K, D, rvec, t, 1))
         // if (! cv::solvePnP(pts_3_vector, pts_2_vector, K, DD, rvec, t, false, cv::SOLVEPNP_EPNP))
@@ -804,6 +829,7 @@ bool Estimator::initialStructure()
             DLOG(INFO) << "solve pnp fail!";
             return false;
         }
+        //paper[6] 崔华坤[29, 30]
         cv::Rodrigues(rvec, r);
         MatrixXd R_pnp,tmp_R_pnp;
         cv::cv2eigen(r, tmp_R_pnp);
@@ -824,6 +850,12 @@ bool Estimator::initialStructure()
 
 }
 
+/*
+视频和IMU的对齐。
+    1. 估计gyro bias. solveGyroscopeBias
+    2. 初始化速度、重力和尺度因子:对应代码中 LinearAlignment()
+    3. 修正g: 对应代码中RefineGravity()
+*/
 bool Estimator::visualInitialAlign()
 {
     TicToc t_g;
@@ -892,8 +924,9 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
     for (int i = 0; i < WINDOW_SIZE; i++)
     {
         vector<pair<Vector3d, Vector3d>> corres;
-        corres = f_manager.getCorresponding(i, WINDOW_SIZE);
-        if (corres.size() > 20)
+        corres = f_manager.getCorresponding(i, WINDOW_SIZE);//获取两个滑窗内所有对应（共视）的特征点在归一化平面上的坐标，并存入corres。
+        //其实在MotionEstimator::solveRelativeRT内部也有对corres size的判断，需要大于15才执行PnP。
+        if (corres.size() > 20)//在滑窗内寻找与当前帧的匹配特征点数较多的关键帧才能作为参考帧
         {
             double sum_parallax = 0;
             double average_parallax;
@@ -903,9 +936,11 @@ bool Estimator::relativePose(Matrix3d &relative_R, Vector3d &relative_T, int &l)
                 Vector2d pts_1(corres[j].second(0), corres[j].second(1));
                 double parallax = (pts_0 - pts_1).norm();
                 sum_parallax = sum_parallax + parallax;
-
             }
             average_parallax = 1.0 * sum_parallax / int(corres.size());
+            //平均视差要大于30
+            //通过求基础矩阵 cv::findFundamentalMat 计算出当前帧到参考帧的 T
+            //这里并不是拿所有滑窗内的特征点信息来计算RT，如果solveRelativeRT求得了一个有效的RT就直接return了。
             if(average_parallax * 460 > 30 && m_estimator.solveRelativeRT(corres, relative_R, relative_T))
             {
                 l = i;
@@ -1580,7 +1615,11 @@ void Estimator::getPoseInWorldFrame(int index, Eigen::Matrix4d &T)
     T.block<3, 3>(0, 0) = Rs[index];
     T.block<3, 1>(0, 3) = Ps[index];
 }
-
+/*
+根据上一帧和当前帧的位姿变化，预测下一阵的位姿，
+然后将当前帧的特征点根据预测位姿变换后，得到预测的特征点。
+坐标系依次变化:camera -> IMU -> world -> IMU -> camera
+*/
 void Estimator::predictPtsInNextFrame()
 {
     //printf("predict pts in next frame\n");
@@ -1588,9 +1627,20 @@ void Estimator::predictPtsInNextFrame()
         return;
     // predict next pose. Assume constant velocity motion
     Eigen::Matrix4d curT, prevT, nextT;
-    getPoseInWorldFrame(curT);
-    getPoseInWorldFrame(frame_count - 1, prevT);
-    nextT = curT * (prevT.inverse() * curT);
+    getPoseInWorldFrame(curT); //得到在w系下，当最新状态的Rs和Ps
+    getPoseInWorldFrame(frame_count - 1, prevT);//得到在w系下，当上一帧的Rs和Ps
+    /*
+        prevT: 上一帧的位姿
+        curT: 当前帧位姿
+        nextT: 待遇测的下一帧位姿。
+
+        设prevT到curT的转换矩阵为 delta_T 满足：
+        delta_T * prevT = curT
+        则，delta_T = curT * (prevT.inverse)
+        可预测下一状态位姿
+        nextT = 则，delta_T * curT = curT * (prevT.inverse) * curT
+    */
+    nextT = curT * (prevT.inverse() * curT); 
     map<int, Eigen::Vector3d> predictPts;
 
     for (auto &it_per_id : f_manager.feature)
@@ -1600,19 +1650,25 @@ void Estimator::predictPtsInNextFrame()
             int firstIndex = it_per_id.start_frame;
             int lastIndex = it_per_id.start_frame + it_per_id.feature_per_frame.size() - 1;
             //printf("cur frame index  %d last frame index %d\n", frame_count, lastIndex);
+            //如果特征点跟踪数大于2，且同时在最后一个滑窗出现，即被当前帧检测到。
             if((int)it_per_id.feature_per_frame.size() >= 2 && lastIndex == frame_count)
             {
+                // 将归一化平面的3D坐标(x/z,y/z,1), 还原到原始3D位置，即(x,y,z). 此处的z即depth。
                 double depth = it_per_id.estimated_depth;
+                //将pt从camera转到imu坐标系。
                 Vector3d pts_j = ric[0] * (depth * it_per_id.feature_per_frame[0].point) + tic[0];
+                //将pts_j转到世界坐标系，即w系。
                 Vector3d pts_w = Rs[firstIndex] * pts_j + Ps[firstIndex];
+                //得到在body(imu)系下的位置，没理解为什么是 (pts_w - nextT_Ps)
                 Vector3d pts_local = nextT.block<3, 3>(0, 0).transpose() * (pts_w - nextT.block<3, 1>(0, 3));
+                //pts_cam是将pts_local从body(imu)系下转到camera系下。
                 Vector3d pts_cam = ric[0].transpose() * (pts_local - tic[0]);
                 int ptsIndex = it_per_id.feature_id;
                 predictPts[ptsIndex] = pts_cam;
             }
         }
     }
-    featureTracker.setPrediction(predictPts);
+    featureTracker.setPrediction(predictPts);//预测下一帧特征点的坐标。
     //printf("estimator output %d predict pts\n",(int)predictPts.size());
 }
 //SONG:计算重映射误差。

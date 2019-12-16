@@ -19,7 +19,7 @@
 #include "../driver/mglog.h"
 
 using namespace std;
-
+//代码中很多地方没有使用这个常量，而是直接用的460，如果以后要修改这个值，需要全局搜索460并做替换。
 const double FOCAL_LENGTH = 460.0;  //It's just a virtual parameter, so you don't need to change it anyway.
 const int WINDOW_SIZE = 10;
 const int NUM_OF_F = 1000;

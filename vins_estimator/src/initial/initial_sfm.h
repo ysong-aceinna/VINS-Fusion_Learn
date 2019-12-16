@@ -23,12 +23,15 @@ using namespace Eigen;
 using namespace std;
 
 
-
+//参考FeaturePerId的定义。
+//对world系中的一个被观测点，会被滑动窗口中的n个视频帧所观测到，对应产生n个特征点信息。
+//observation中存储的是：同一个被观测点生成的n个特征点的归一化平面坐标，和每个特征点对应的在滑窗中的位置。
 struct SFMFeature
 {
     bool state;
     int id;
     vector<pair<int,Vector2d>> observation;
+	//     start_frame  特征点对应的归一化平面上的坐标
     double position[3];
     double depth;
 };

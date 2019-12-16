@@ -219,7 +219,12 @@ class IntegrationBase
     Eigen::Matrix<double, 18, 18> noise; //噪声项的对角协方差矩阵,不要被变量名误导。
 
     double sum_dt;
-    Eigen::Vector3d delta_p;    //两帧之间PVQ增量，注意，delta_p,delta_q和delta_v都是在body系下的表示！  参考崔华坤[8]
+    /*
+    delta_p,delta_q和delta_vs是两帧之间PVQ增量，注意：
+        1. 都是在body系下的表示！  参考崔华坤[8]
+        2. 也做估计值用, 对应崔华坤[6, 8]的估计值部分。
+    */ 
+    Eigen::Vector3d delta_p;    
     Eigen::Quaterniond delta_q;
     Eigen::Vector3d delta_v;
 

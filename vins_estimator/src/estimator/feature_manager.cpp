@@ -120,10 +120,13 @@ bool FeatureManager::addFeatureCheckParallax(int frame_count, const map<int, vec
     }
 }
 
+//frame_count_r:滑窗尺寸，即WINDOW_SIZE
+//frame_count_l: 滑窗中的第l个窗口。
+// 获取两个滑窗内所有对应（共视）的特征点在归一化平面上的坐标，并存入corres。
 vector<pair<Vector3d, Vector3d>> FeatureManager::getCorresponding(int frame_count_l, int frame_count_r)
 {
     vector<pair<Vector3d, Vector3d>> corres;
-    for (auto &it : feature)
+    for (auto &it : feature) //遍历所有的特征点
     {
         if (it.start_frame <= frame_count_l && it.endFrame() >= frame_count_r)
         {
@@ -131,8 +134,8 @@ vector<pair<Vector3d, Vector3d>> FeatureManager::getCorresponding(int frame_coun
             int idx_l = frame_count_l - it.start_frame;
             int idx_r = frame_count_r - it.start_frame;
 
+            // a和b分别对应第l和r个窗口同一个特征点在归一化平面上的坐标。
             a = it.feature_per_frame[idx_l].point;
-
             b = it.feature_per_frame[idx_r].point;
             
             corres.push_back(make_pair(a, b));

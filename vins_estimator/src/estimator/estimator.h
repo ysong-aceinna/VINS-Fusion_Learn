@@ -162,7 +162,7 @@ class Estimator
     vector<Vector3d> point_cloud;
     vector<Vector3d> margin_cloud;
     vector<Vector3d> key_poses;
-    double initial_timestamp;
+    double initial_timestamp; //做初始化时，用于计算时间差。
 
 
     double para_Pose[WINDOW_SIZE + 1][SIZE_POSE]; //pos 3维度，四元数姿态4维度， 共7个维度。
@@ -178,7 +178,7 @@ class Estimator
     MarginalizationInfo *last_marginalization_info;
     vector<double *> last_marginalization_parameter_blocks;
 
-    map<double, ImageFrame> all_image_frame; // 存储滑动窗口的[特征点时间戳，特征点信息ImageFrame]，在slideWindow()中将过期的ImageFrame移除。
+    map<double, ImageFrame> all_image_frame; // 存储滑动窗口中每帧图像的特征点信息。[特征点时间戳，特征点信息ImageFrame]，在slideWindow()中将过期的ImageFrame移除。
     IntegrationBase *tmp_pre_integration;
 
     Eigen::Vector3d initP; //没有用到

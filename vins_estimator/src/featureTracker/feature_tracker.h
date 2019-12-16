@@ -63,15 +63,15 @@ public:
     // 带"_un_"自带的表示非畸变的特征点。
     // cur: 当前帧， prev:上一帧
     // right: 当使用双目相机时，用于标识右目相机. （单目相机对应左目）
-    // 关于成员变量的组织(设计)不是很好，可以将特征点，id，时间戳，跟踪数量等信息封装成一个struct。
+    // 关于成员变量的组织(设计)不是很好，不方便阅读代码。可以将特征点，id，时间戳，跟踪数量等信息封装成一个struct。
     int row, col; //图像的行和列值
     cv::Mat imTrack;
-    cv::Mat mask;
+    cv::Mat mask; //如果当前的特征点数量不足MAX_CNT时，需要提取新的特征点，mask的作用就是盖住原有特征点及附近区域
     cv::Mat fisheye_mask;
     cv::Mat prev_img, cur_img; //上一帧和当前帧的原始畸变图像。
     vector<cv::Point2f> n_pts; //保存由goodFeaturesToTrack得到的角点。
-    vector<cv::Point2f> predict_pts; //预测的特征点
-    vector<cv::Point2f> predict_pts_debug;
+    vector<cv::Point2f> predict_pts; //预测的特征点2D坐标。
+    vector<cv::Point2f> predict_pts_debug; //内容上和predict_pts是相同的。可以删除掉了。
     vector<cv::Point2f> prev_pts, cur_pts, cur_right_pts; //上一帧、当前帧的特征点容器。
     vector<cv::Point2f> prev_un_pts, cur_un_pts, cur_un_right_pts;//上一帧、当前帧的非畸变特征点容器。
     vector<cv::Point2f> pts_velocity, right_pts_velocity; //用于存储相邻两帧图像得到的对应特征点的相对速度。
@@ -85,5 +85,5 @@ public:
     double prev_time;//上一帧的时间戳
     bool stereo_cam; //是否为双目相机的标志位，默认为false，即单目相机。
     int n_id;  //id生成器，用于生成新的id号，用n_id++作为新特征点的id。
-    bool hasPrediction;
+    bool hasPrediction; //是否为下一帧的特征点做了预测。
 };

@@ -37,6 +37,14 @@
     //多维vector的初始化
     VectorXd dep_vec(getFeatureCount());
 
+    //块操作，解线性方程组
+    MatrixXd A{n_state, n_state};
+    A.setZero();
+    VectorXd b{n_state};
+    b.setZero();
+    A.block<6, 6>(i * 3, i * 3) += r_A.topLeftCorner<6, 6>();
+    b.segment<6>(i * 3) += r_b.head<6>();
+    x = A.ldlt().solve(b);
 
 
 

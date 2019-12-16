@@ -11,6 +11,7 @@
 
 #include "feature_tracker.h"
 
+//判断像素坐标是否在图像边界范围内。
 bool FeatureTracker::inBorder(const cv::Point2f &pt)
 {
     const int BORDER_SIZE = 1;
@@ -29,6 +30,7 @@ double distance(cv::Point2f pt1, cv::Point2f pt2)
 }
 
 //SONG: status中的值为0时，删除v中的对应项，否则保留。
+//下边的两个reduceVector，可以用利用函数重载合并为一个函数。
 void reduceVector(vector<cv::Point2f> &v, vector<uchar> status)
 {
     int j = 0;
@@ -58,10 +60,11 @@ FeatureTracker::FeatureTracker()
 // 如果两个特征点挨得很近小于MIN_DIST的距离，则只按照第一个特征点为圆心画圆，第二个特征点对应的圆就忽略不画了。
 void FeatureTracker::setMask()
 {
+    //构造一个图像。
     mask = cv::Mat(row, col, CV_8UC1, cv::Scalar(255));
 
     // prefer to keep features that are tracked for long time
-    //cnt_pts_id是一个容器，保存了当前帧所有特征点的信息，包括每个特征点的坐标，id以及连续跟踪了多少帧。
+    //cnt_pts_id 是一个容器，保存了当前帧所有特征点的信息，包括每个特征点的坐标，id以及连续跟踪了多少帧。
     vector<pair<int, pair<cv::Point2f, int>>> cnt_pts_id;
     //       跟踪计数器     特征点坐标   特征点id
     //cnt_pts_id的第一个key是该特征点的跟踪计数器，第二个key是特征点坐标，value是特征点的id    
@@ -78,7 +81,7 @@ void FeatureTracker::setMask()
     ids.clear();
     track_cnt.clear();
 
-    //cur_pts,ids,track_cnt都按照cnt_pts_id记录的特征点的顺序（按照跟踪计数，从大到小排序）
+    //cur_pts,ids,track_cnt都按照cnt_pts_id记录的特征点的顺序（按照跟踪计数，从大到小排序，即按照跟踪质量排序）
     for (auto &it : cnt_pts_id)
     {
         if (mask.at<uchar>(it.second.first) == 255)//如果之前已有特征点对应的圆将本像素设置为0，则不再重复画圆了。
@@ -124,7 +127,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             clahe->apply(rightImg, rightImg);
     }
     */
-    cur_pts.clear(); //cur_pts 保存当前帧的特征点，先清空。
+    cur_pts.clear(); //cur_pts 保存的是当前帧的特征点，先清空。
 
     //下边这个if块的功能是：通过LK光流算法，在当前帧图像中检测匹配的跟踪点，并通过一些策略剔除误匹配的跟踪点。
     if (prev_pts.size() > 0) //如果上一帧检测有特征点
@@ -141,7 +144,6 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             //cur_pts即是输入又是输出，保存匹配成功的特征点。
             //status是标志位，如果找到了对应特征的流，则将向量的对应元素设置为1；否则，置0。
             //参考calcOpticalFlowPyrLK的参数说明。[https://blog.csdn.net/liangchunjiang/article/details/79869830]
-            //cur_pts这里作为输入输出参数使用。
             cv::calcOpticalFlowPyrLK(prev_img, cur_img, prev_pts, cur_pts, status, err, cv::Size(21, 21), 1, 
             cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 30, 0.01), cv::OPTFLOW_USE_INITIAL_FLOW);
             
@@ -234,7 +236,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     cur_un_pts = undistortedPts(cur_pts, m_camera[0]);
     pts_velocity = ptsVelocity(ids, cur_un_pts, cur_un_pts_map, prev_un_pts_map);
 
-    if(!_img1.empty() && stereo_cam) //对双目相机的处理。
+    if(!_img1.empty() && stereo_cam) //对双目相机的处理。是在左右目图像帧中找光流点的匹配，而不是在前后帧。
     {
         ids_right.clear();
         cur_right_pts.clear();
@@ -293,6 +295,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     for(size_t i = 0; i < cur_pts.size(); i++)
         prevLeftPtsMap[ids[i]] = cur_pts[i];
 
+    //下边将7维的特征信息放到featureFrame中返回。
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> featureFrame;
     for (size_t i = 0; i < ids.size(); i++)
     {
@@ -399,6 +402,7 @@ void FeatureTracker::readIntrinsicParameter(const vector<string> &calib_file)
 /*
 SONG:这个函数目前没有被调用.
 功能是:根据畸变参数,将畸变图像转为非畸变图像.
+下边cv::Mat.at(idx)取像素点的方式效率非常低。
 */
 void FeatureTracker::showUndistortion(const string &name)
 {
@@ -437,7 +441,7 @@ void FeatureTracker::showUndistortion(const string &name)
     // cv::waitKey(0);
 }
 
-//SONG:将像素坐标pts去畸变，并转为归一化平面坐标un_pts
+//SONG:将一系列的像素坐标pts去畸变，并转为归一化平面坐标un_pts
 vector<cv::Point2f> FeatureTracker::undistortedPts(vector<cv::Point2f> &pts, camodocal::CameraPtr cam)
 {
     vector<cv::Point2f> un_pts;
@@ -457,7 +461,7 @@ vector<cv::Point2f> FeatureTracker::ptsVelocity(vector<int> &ids, vector<cv::Poi
 {
     vector<cv::Point2f> pts_velocity;
     cur_id_pts.clear();
-    //通过pts来构造cur_id_pts
+    //通过pts来构造 cur_id_pts
     for (unsigned int i = 0; i < ids.size(); i++)
     {
         cur_id_pts.insert(make_pair(ids[i], pts[i]));
@@ -561,8 +565,8 @@ void FeatureTracker::drawTrack(const cv::Mat &imLeft, const cv::Mat &imRight,
     //cv::resize(imCur2, imCur2Compress, cv::Size(cols, rows / 2));
 }
 
-//SONG:根据3D的predictPts来更新2D predict_pts, 如果predictPts不含有指定的id项，
-//则将对应的prev_pts放入predict_pts。
+//SONG:根据3D的 predictPts 来更新2D predict_pts, 如果 predictPts 不含有指定的id项，
+//则将对应的 prev_pts 放入 predict_pts 。
 void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
 {
     hasPrediction = true;
@@ -574,7 +578,7 @@ void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
         //printf("prevLeftId size %d prevLeftPts size %d\n",(int)prevLeftIds.size(), (int)prevLeftPts.size());
         int id = ids[i];
         itPredict = predictPts.find(id);
-        if (itPredict != predictPts.end())
+        if (itPredict != predictPts.end()) //找到了指定id的特征点。
         {
             Eigen::Vector2d tmp_uv;
             //SONG:EquidistantCamera::spaceToPlane
@@ -589,7 +593,7 @@ void FeatureTracker::setPrediction(map<int, Eigen::Vector3d> &predictPts)
 }
 
 //剔除干扰点。
-//removePtsIds存放的是需要剔除的特征点的id。
+//removePtsIds 存放的是需要剔除的特征点的id。
 //status:0  剔除  status:1 保留
 void FeatureTracker::removeOutliers(set<int> &removePtsIds)
 {
